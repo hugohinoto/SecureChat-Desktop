@@ -21,12 +21,29 @@
     "appId": "jp.hugohinoto.securechat.desktop",
     "productName": "SecureChat Desktop",
     "asar": true,
-    "files": ["dist/src/**/*", "package.json"],
-    "directories": { "buildResources": "build", "output": "release" },
+    "files": [
+      "dist/src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
     "win": {
       "icon": "build/icon.svg",
-      "target": [{ "target": "portable", "arch": ["x64"] }]
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker"
     },
-    "portable": { "artifactName": "SecureChat-Desktop-${version}-portable.exe" }
+    "portable": {
+      "artifactName": "SecureChat-Desktop-${version}-portable.exe",
+      "useTempDir": true
+    }
   }
 }
