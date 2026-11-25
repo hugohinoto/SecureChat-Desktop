@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { Conversation, Message, QueueEntry, VaultData } from "./shared";
 const MAGIC = "SC-DESKTOP-VAULT", VERSION = 1, KEY_LENGTH = 32, SALT_LENGTH = 16, IV_LENGTH = 12, TAG_LENGTH = 16;
-const N = 1 << 15, R = 8, P = 1;
+const N = 1 << 17, R = 8, P = 1;
 interface Envelope { magic:string; version:number; kdf:"scrypt"; params:{N:number;r:number;p:number}; salt:string; iv:string; tag:string; ciphertext:string; }
 function emptyVault(): VaultData { return {schemaVersion:1,conversations:[],outbox:[]}; }
 function validVault(v: unknown): v is VaultData {
@@ -68,7 +68,7 @@ export class VaultStore {
   }
   private assertUnlocked():void { if(!this.unlocked) throw new Error("VAULT_LOCKED"); }
   private async derive(password:string,salt:Buffer):Promise<Buffer> {
-    return await new Promise<Buffer>((resolve,reject)=>{ scryptCallback(password,salt,KEY_LENGTH,{N,r:R,p:P,maxmem:128*1024*1024},(error,derived)=>{ if(error) reject(error); else resolve(derived as Buffer); }); });
+    return await new Promise<Buffer>((resolve,reject)=>{ scryptCallback(password,salt,KEY_LENGTH,{N,r:R,p:P,maxmem:256*1024*1024},(error,derived)=>{ if(error) reject(error); else resolve(derived as Buffer); }); });
   }
   private async persist():Promise<void> {
     this.assertUnlocked();
