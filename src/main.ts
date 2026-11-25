@@ -5,6 +5,9 @@ import { randomBytes } from "node:crypto";
 import { validateServerUrl } from "./server-url";
 
 type ServerConfig = { serverUrl: string };
+
+// Public production endpoint: first launch connects here without asking the user.
+const DEFAULT_SERVER_URL = "https://securechat.hugohinoto.workers.dev";
 let remoteWindow: BrowserWindow | null = null;
 let configWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
@@ -173,9 +176,8 @@ app.whenReady().then(async () => {
   createSplash();
   try {
     const envUrl = process.env.SECURECHAT_SERVER_URL;
-    const savedUrl = envUrl ? validateServerUrl(envUrl) : await readServerConfig();
-    if (savedUrl) createRemoteWindow(savedUrl);
-    else { closeSplash(); createConfigWindow(); }
+    const savedUrl = envUrl ? validateServerUrl(envUrl) : (await readServerConfig()) || DEFAULT_SERVER_URL;
+    createRemoteWindow(savedUrl);
   } catch (error) {
     closeSplash();
     createConfigWindow(error instanceof Error ? error.message : "サーバー設定を読み込めませんでした。");
