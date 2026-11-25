@@ -7,14 +7,19 @@ function dataDir():string {
   const portable=process.env.PORTABLE_EXECUTABLE_DIR;
   return portable ? join(portable,"portable-data") : join(app.getPath("userData"),"data");
 }
+function assertTrustedSender(event: Electron.IpcMainInvokeEvent):void {
+  if (!win || event.sender !== win.webContents || !event.senderFrame.url.startsWith("file://")) {
+    throw new Error("IPC_SENDER_REJECTED");
+  }
+}
 function registerIpc():void {
-  ipcMain.handle("vault:status",()=>vault.exists().then(exists=>({exists,unlocked:vault.unlocked})));
-  ipcMain.handle("vault:create",(_e,p:string)=>vault.create(p));
-  ipcMain.handle("vault:unlock",(_e,p:string)=>vault.unlock(p));
-  ipcMain.handle("vault:lock",()=>vault.lock());
-  ipcMain.handle("vault:snapshot",()=>vault.snapshot());
-  ipcMain.handle("conversation:create",(_e,t:string)=>vault.createConversation(t));
-  ipcMain.handle("message:add-local",(_e,id:string,t:string)=>vault.addLocalMessage(id,t));
+  ipcMain.handle("vault:status",(e)=>{assertTrustedSender(e);return vault.exists().then(exists=>({exists,unlocked:vault.unlocked}));});
+  ipcMain.handle("vault:create",(e,p:string)=>{assertTrustedSender(e);return vault.create(p);});
+  ipcMain.handle("vault:unlock",(e,p:string)=>{assertTrustedSender(e);return vault.unlock(p);});
+  ipcMain.handle("vault:lock",(e)=>{assertTrustedSender(e);return vault.lock();});
+  ipcMain.handle("vault:snapshot",(e)=>{assertTrustedSender(e);return vault.snapshot();});
+  ipcMain.handle("conversation:create",(e,t:string)=>{assertTrustedSender(e);return vault.createConversation(t);});
+  ipcMain.handle("message:add-local",(e,id:string,t:string)=>{assertTrustedSender(e);return vault.addLocalMessage(id,t);});
 }
 function createWindow():void {
   win=new BrowserWindow({width:1080,height:760,minWidth:720,minHeight:560,backgroundColor:"#10151d",title:"SecureChat Desktop",
