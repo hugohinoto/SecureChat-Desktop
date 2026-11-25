@@ -155,7 +155,7 @@ function installApplicationMenu(): void {
       { type: "separator" }, { role: "quit", label: "終了" }
     ] },
     { label: "編集", submenu: [{ role: "undo" }, { role: "redo" }, { type: "separator" }, { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" }] },
-    { label: "表示", submenu: [{ role: "reload" }, { role: "togglefullscreen" }, ...(app.isPackaged ? [] : [{ role: "toggledevtools" as const }])] }
+    { label: "表示", submenu: [{ role: "reload" }, { role: "togglefullscreen" }, ...(app.isPackaged ? [] : [{ role: "toggleDevTools" as const }])] }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
