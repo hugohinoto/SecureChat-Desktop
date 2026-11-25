@@ -1,5 +1,5 @@
 import { randomBytes, scrypt as scryptCallback, createCipheriv, createDecipheriv } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { Conversation, Message, QueueEntry, VaultData } from "./shared";
 const MAGIC = "SC-DESKTOP-VAULT", VERSION = 1, KEY_LENGTH = 32, SALT_LENGTH = 16, IV_LENGTH = 12, TAG_LENGTH = 16;
@@ -34,6 +34,8 @@ export class VaultStore {
   }
   async unlock(password:string):Promise<void> {
     validatePassword(password);
+    const fileInfo = await stat(this.filePath);
+    if (fileInfo.size > 90 * 1024 * 1024) throw new Error("VAULT_FILE_TOO_LARGE");
     const raw = await readFile(this.filePath,"utf8");
     let env:Envelope;
     try { env = JSON.parse(raw) as Envelope; } catch { throw new Error("VAULT_FORMAT_INVALID"); }
@@ -55,7 +57,9 @@ export class VaultStore {
   async createConversation(title:string):Promise<Conversation> {
     this.assertUnlocked(); const t=title.trim().slice(0,100); if(!t) throw new Error("CONVERSATION_TITLE_REQUIRED");
     const c:Conversation={id:randomBytes(16).toString("hex"),title:t,createdAt:new Date().toISOString(),messages:[]};
-    this.data!.conversations.unshift(c); await this.persist(); return structuredClone(c);
+    this.data!.conversations.unshift(c);
+    try { await this.persist(); } catch (error) { this.data!.conversations.shift(); throw error; }
+    return structuredClone(c);
   }
   async addLocalMessage(conversationId:string,text:string):Promise<Message> {
     this.assertUnlocked(); const t=text.trim();
@@ -64,7 +68,9 @@ export class VaultStore {
     const m:Message={id:randomBytes(16).toString("hex"),text:t,createdAt:new Date().toISOString(),direction:"outgoing",delivery:"queued"};
     c.messages.push(m);
     const q:QueueEntry={id:randomBytes(16).toString("hex"),conversationId,messageId:m.id,createdAt:m.createdAt,status:"waiting-for-connection"};
-    this.data!.outbox.push(q); await this.persist(); return structuredClone(m);
+    this.data!.outbox.push(q);
+    try { await this.persist(); } catch (error) { c.messages.pop(); this.data!.outbox.pop(); throw error; }
+    return structuredClone(m);
   }
   private assertUnlocked():void { if(!this.unlocked) throw new Error("VAULT_LOCKED"); }
   private async derive(password:string,salt:Buffer):Promise<Buffer> {
