@@ -40,10 +40,6 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker"
-    },
-    "portable": {
-      "artifactName": "SecureChat-Desktop-${version}-portable.exe",
-      "useTempDir": true
     }
   }
 }
