@@ -1,0 +1,29 @@
+import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { join } from "node:path";
+import { VaultStore } from "./vault";
+let win:BrowserWindow|null=null;
+let vault:VaultStore;
+function dataDir():string {
+  const portable=process.env.PORTABLE_EXECUTABLE_DIR;
+  return portable ? join(portable,"portable-data") : join(app.getPath("userData"),"data");
+}
+function registerIpc():void {
+  ipcMain.handle("vault:status",()=>vault.exists().then(exists=>({exists,unlocked:vault.unlocked})));
+  ipcMain.handle("vault:create",(_e,p:string)=>vault.create(p));
+  ipcMain.handle("vault:unlock",(_e,p:string)=>vault.unlock(p));
+  ipcMain.handle("vault:lock",()=>vault.lock());
+  ipcMain.handle("vault:snapshot",()=>vault.snapshot());
+  ipcMain.handle("conversation:create",(_e,t:string)=>vault.createConversation(t));
+  ipcMain.handle("message:add-local",(_e,id:string,t:string)=>vault.addLocalMessage(id,t));
+}
+function createWindow():void {
+  win=new BrowserWindow({width:1080,height:760,minWidth:720,minHeight:560,backgroundColor:"#10151d",title:"SecureChat Desktop",
+    webPreferences:{preload:join(__dirname,"preload.js"),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,allowRunningInsecureContent:false}});
+  win.webContents.setWindowOpenHandler(({url})=>{if(url.startsWith("https://")) void shell.openExternal(url);return {action:"deny"};});
+  win.webContents.on("will-navigate",(event,url)=>{if(!url.startsWith("file://")) event.preventDefault();});
+  void win.loadFile(join(__dirname,"renderer","index.html"));
+  win.on("closed",()=>{vault.lock();win=null;});
+}
+app.whenReady().then(()=>{vault=new VaultStore(join(dataDir(),"vault.scv"));registerIpc();createWindow();app.on("activate",()=>{if(BrowserWindow.getAllWindows().length===0)createWindow();});});
+app.on("before-quit",()=>vault?.lock());
+app.on("window-all-closed",()=>{if(process.platform!=="darwin")app.quit();});
