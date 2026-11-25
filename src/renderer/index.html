@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SecureChat Desktop</title>
+<link rel="icon" type="image/svg+xml" href="assets/securechat-icon.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="shell">
+<header class="topbar">
+<div class="brand"><img class="brand-icon" src="assets/securechat-icon.svg" alt=""><div><strong>SecureChat</strong><small>DESKTOP · OFFLINE FIRST</small></div></div>
+<span class="status">オフライン動作</span>
+</header>
+<section id="gate" class="gate"><div class="gate-card"><div class="eyebrow">LOCAL ENCRYPTED VAULT</div><h1 id="gate-title">ローカル保管庫</h1><p id="gate-description">マスターパスワードで暗号化データを保護します。</p><form id="gate-form"><label for="password">マスターパスワード</label><input id="password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required><div id="confirm-password-row"><label for="confirm-password">マスターパスワード（確認）</label><input id="confirm-password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required></div><p class="hint">12文字以上。忘れるとデータを復旧できません。</p><button id="gate-submit" type="submit">保管庫を作成</button></form><p id="gate-error" class="error" role="alert"></p></div></section>
+<section id="workspace" class="workspace" hidden>
+<aside class="sidebar"><div class="side-heading"><span>チャット</span><button id="new-chat" class="icon-button" aria-label="新しいチャット">＋</button></div><div id="conversation-list" class="conversation-list"></div><div class="side-bottom"><div class="vault-indicator">● 暗号化保管庫は解除中</div><button id="lock" class="secondary">ロックする</button></div></aside>
+<section class="chat-panel"><div class="chat-heading"><div><div id="chat-title" class="chat-title">チャットを選択</div><div class="subheading">端末内に保存 · サーバー未接続</div></div><span class="local-tag">LOCAL</span></div><div id="messages" class="messages"><div class="empty-state"><h2>オフラインでも使える</h2><p>チャットを作成してローカルに保存できます。</p></div></div><form id="composer" class="composer"><textarea id="message-input" rows="1" placeholder="メッセージを入力…" maxlength="100000" disabled></textarea><button id="send" type="submit" disabled>送信キューへ</button></form><div class="delivery-note">暗号化して端末に保存します。現在、相手には送信されません。</div></section>
+</section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
