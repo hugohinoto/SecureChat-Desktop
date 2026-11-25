@@ -16,3 +16,7 @@
 - The current outbox is local-only. No message is delivered to another user.
 - Account authentication, device registration, Olm/Megolm, and forward-secrecy interoperability with SecureChat web are not implemented here.
 - Do not claim production-ready end-to-end messaging until the desktop client integrates the existing protocol and passes multi-device security tests.
+
+## Dependency audit status
+
+The CI audit currently passes with a high-severity threshold. npm reports six moderate findings in the electron-builder build-time dependency tree involving minimatch versions below 11.0.1 (GHSA-g3hv-75wg-m249). This is a build-tool dependency issue, not a dependency loaded by the packaged app at runtime, but it remains tracked and should be resolved through a compatibility-tested upstream update. Do not interpret the high-threshold CI pass as a zero-vulnerability audit.
