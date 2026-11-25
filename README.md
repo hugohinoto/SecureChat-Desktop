@@ -17,7 +17,7 @@ Initial project setup is in progress. The first implementation targets Windows 1
 
 ## Development
 
-Requirements: Node.js 22 or later and npm.
+Requirements: Node.js 24 or later and npm.
 
 ```sh
 npm install
