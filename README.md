@@ -19,11 +19,10 @@ SecureChatのオンライン機能を利用するWindows向けデスクトップ
 ## 初回接続
 
 1. SecureChat Desktopを起動します。
-2. SecureChat本体が稼働しているHTTPSのルートURLを入力します。
-3. 「保存して接続」を押します。
-4. 既存のSecureChatアカウントでログインするか、招待コードで登録します。
+2. SecureChat本体（`https://securechat.hugohinoto.workers.dev`）へ自動接続します。
+3. 既存のSecureChatアカウントでログインするか、招待コードで登録します。
 
-接続先URLはポータブル版では portable-data/server-config.json、通常インストール版ではアプリのユーザーデータに保存されます。アプリメニューの「SecureChat → サーバー接続先を変更」から変更できます。アプリはHTTPS以外の接続先を拒否します。ローカルWorker開発用HTTP接続は SECURECHAT_ALLOW_INSECURE_DEV=1 の開発時だけ許可されます。
+初回の接続先URL入力は不要です。接続先は初期値としてアプリに組み込まれ、必要な場合はアプリメニューの「SecureChat → サーバー接続先を変更」から変更できます。変更した接続先はポータブル版では `portable-data/server-config.json`、通常インストール版ではアプリのユーザーデータに保存されます。アプリはHTTPS以外の接続先を拒否します。ローカルWorker開発用HTTP接続は `SECURECHAT_ALLOW_INSECURE_DEV=1` の開発時だけ許可されます。
 
 ## データとポータブル利用
 
