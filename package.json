@@ -4,5 +4,5 @@
   "main":"dist/src/main.js",
   "scripts":{"build":"tsc -p tsconfig.json && node scripts/copy-renderer.cjs","test":"npm run build && node --test dist/test/*.test.js","start":"npm run build && electron .","dist:win":"npm run build && electron-builder --win portable"},
   "devDependencies":{"@types/node":"24.10.0","electron":"45.5.0","electron-builder":"26.18.1","typescript":"5.9.3"},
-  "build":{"appId":"jp.hugohinoto.securechat.desktop","productName":"SecureChat Desktop","asar":true,"files":["dist/**/*","package.json"],"directories":{"output":"release"},"win":{"target":[{"target":"portable","arch":["x64"]}]},"portable":{"artifactName":"SecureChat-Desktop-${version}-portable.exe"}}
+  "build":{"appId":"jp.hugohinoto.securechat.desktop","productName":"SecureChat Desktop","asar":true,"files":["dist/src/**/*","package.json"],"directories":{"output":"release"},"win":{"target":[{"target":"portable","arch":["x64"]}]},"portable":{"artifactName":"SecureChat-Desktop-${version}-portable.exe"}}
 }
