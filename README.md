@@ -1,39 +1,59 @@
 # SecureChat Desktop
 
-Offline-first desktop companion for SecureChat.
+SecureChatのオンライン機能を利用するWindows向けデスクトップクライアントです。SecureChat本体のWebアプリをElectronの分離されたウィンドウで開き、既存のAPI・認証・暗号化クライアントをそのまま使用します。
 
-## Status
+## オンライン機能
 
-Initial project setup is in progress. The first implementation targets Windows 11 and a portable folder distribution.
+接続先のSecureChatサーバーで利用可能な機能を使用します。
 
-## Security model
+- アカウント登録（招待コード）・ログイン・ログアウト・アカウント削除
+- ユーザー検索、相互OTP連絡先認証、個別チャット
+- Durable Objects WebSocketによるリアルタイム通信
+- 既存Crypto Protocol v1互換と、双方の指紋確認・承認を前提とするMatrix Rust/WASM Olm / Megolm v2クライアント
+- 端末ごとの暗号鍵・鍵配送・端末管理
+- SecureDrop、運営のお知らせ、バグ報告
+- ブラウザー通知（OSの通知許可が必要）
 
-- The local vault is encrypted with AES-256-GCM.
-- A key is derived from a user-supplied master password using scrypt and a random salt.
-- The password is never stored.
-- The encrypted vault can be moved with the portable application folder and unlocked on another PC using the same master password.
-- Losing the master password means the vault cannot be recovered.
-- Offline messages remain local and queued; they are not delivered until a verified server integration is implemented.
+このデスクトップアプリは暗号方式やAPIを独自実装せず、接続先のSecureChat Webクライアントを使用します。暗号化の実際の状態は会話ごとの画面表示に従ってください。Crypto v2の実環境安全性はSecureChat本体側の独立監査・マルチ端末検証状況に依存します。
 
-## Development
+## 初回接続
+
+1. SecureChat Desktopを起動します。
+2. SecureChat本体が稼働しているHTTPSのルートURLを入力します。
+3. 「保存して接続」を押します。
+4. 既存のSecureChatアカウントでログインするか、招待コードで登録します。
+
+接続先URLはポータブル版では portable-data/server-config.json、通常インストール版ではアプリのユーザーデータに保存されます。アプリメニューの「SecureChat → サーバー接続先を変更」から変更できます。アプリはHTTPS以外の接続先を拒否します。ローカルWorker開発用HTTP接続は SECURECHAT_ALLOW_INSECURE_DEV=1 の開発時だけ許可されます。
+
+## データとポータブル利用
+
+Windowsポータブル版では、実行ファイルと隣接する portable-data フォルダーを一緒に保管・移動してください。ログインCookie、IndexedDBの端末暗号鍵、Webアプリのローカル状態はElectronプロファイル内に保存されます。端末プロファイルを含むため、共有PCではフォルダーを他人に渡さないでください。
+
+旧オフライン試作版の vault.scv が存在する場合、このオンライン版は削除しません。ただし旧ローカルキューをオンライン会話へ自動移行・送信することはありません。
+
+## セキュリティ境界
+
+- リモートSecureChatページにはNode.js統合・preloadブリッジを公開しません。
+- HTTPSのみ許可し、メインウィンドウのナビゲーションを設定済みオリジンに制限します。
+- 外部HTTPSリンクは既定ブラウザーで開きます。
+- 設定画面はローカルファイルで動作し、限定されたIPCだけを使用します。
+- Electronプロファイルのコピーは端末鍵の複製になります。端末の複製・失効はSecureChat側の端末管理方針に従ってください。
+
+## 開発
 
 Requirements: Node.js 24 or later and npm.
 
-```sh
-npm install
-npm run build
-npm test
-npm start
-```
+    npm install
+    npm run build
+    npm test
+    npm start
 
-## Build a Windows portable executable
+ローカルCloudflare Workerを使う開発時だけ、SECURECHAT_ALLOW_INSECURE_DEV=1 と SECURECHAT_SERVER_URL=http://127.0.0.1:8787 を設定して起動できます。
 
-```sh
-npm run dist:win
-```
+## Windowsポータブル版（インストール不要）
 
-The portable executable and its adjacent `portable-data` directory should be kept together when moving the app between PCs.
+    npm run dist:win
 
-## Important
+生成物はインストーラーではなく、単体起動できる x64 のポータブル EXE（`SecureChat-Desktop-0.2.0-portable.exe`）です。Node.js、npm、Electron、追加ランタイムを利用者側でインストールする必要はありません。Chromium / Electron ランタイムは EXE に含まれます。EXEをダブルクリックすると一時フォルダーへ展開して起動し、Windowsへのインストール、スタートメニュー登録、レジストリ登録、管理者権限は要求しません。
 
-This project is not yet connected to the SecureChat production service. Do not treat local queue entries as delivered messages. Do not store your only copy of important data in a pre-release build.
+初回起動後は、同じ場所に `portable-data` フォルダーが自動作成され、接続先URL、ログイン状態、端末側のWebアプリデータが保存されます。別のPCへ移動するときは EXE と `portable-data` フォルダーを一緒にコピーしてください。EXE単体でも起動はできますが、`portable-data` を移動しない場合は接続先設定やログイン状態が引き継がれません。
