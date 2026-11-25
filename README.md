@@ -50,8 +50,10 @@ Requirements: Node.js 24 or later and npm.
 
 ローカルCloudflare Workerを使う開発時だけ、SECURECHAT_ALLOW_INSECURE_DEV=1 と SECURECHAT_SERVER_URL=http://127.0.0.1:8787 を設定して起動できます。
 
-## Windowsポータブル版
+## Windowsポータブル版（インストール不要）
 
     npm run dist:win
 
-ポータブル版は実行ファイルと portable-data フォルダーをセットで扱ってください。
+生成物はインストーラーではなく、単体起動できる x64 のポータブル EXE（`SecureChat-Desktop-0.2.0-portable.exe`）です。Node.js、npm、Electron、追加ランタイムを利用者側でインストールする必要はありません。Chromium / Electron ランタイムは EXE に含まれます。EXEをダブルクリックすると一時フォルダーへ展開して起動し、Windowsへのインストール、スタートメニュー登録、レジストリ登録、管理者権限は要求しません。
+
+初回起動後は、同じ場所に `portable-data` フォルダーが自動作成され、接続先URL、ログイン状態、端末側のWebアプリデータが保存されます。別のPCへ移動するときは EXE と `portable-data` フォルダーを一緒にコピーしてください。EXE単体でも起動はできますが、`portable-data` を移動しない場合は接続先設定やログイン状態が引き継がれません。
