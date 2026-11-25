@@ -47,7 +47,8 @@ export class VaultStore {
     try {
       const d=createDecipheriv("aes-256-gcm",key,iv); d.setAAD(Buffer.from(MAGIC+":"+VERSION)); d.setAuthTag(tag);
       const plain=Buffer.concat([d.update(ciphertext),d.final()]);
-      const parsed:unknown=JSON.parse(plain.toString("utf8"));
+      let parsed:unknown;
+      try { parsed=JSON.parse(plain.toString("utf8")); } finally { plain.fill(0); }
       if(!validVault(parsed)) throw new Error("VAULT_DATA_INVALID");
       this.key=key; this.salt=salt; this.data=parsed;
     } catch { key.fill(0); throw new Error("VAULT_UNLOCK_FAILED"); }
@@ -80,7 +81,9 @@ export class VaultStore {
     this.assertUnlocked();
     const iv=randomBytes(IV_LENGTH), cipher=createCipheriv("aes-256-gcm",this.key!,iv);
     cipher.setAAD(Buffer.from(MAGIC+":"+VERSION));
-    const ciphertext=Buffer.concat([cipher.update(Buffer.from(JSON.stringify(this.data),"utf8")),cipher.final()]);
+    const plaintext=Buffer.from(JSON.stringify(this.data),"utf8");
+    let ciphertext:Buffer;
+    try { ciphertext=Buffer.concat([cipher.update(plaintext),cipher.final()]); } finally { plaintext.fill(0); }
     const env:Envelope={magic:MAGIC,version:VERSION,kdf:"scrypt",params:{N,r:R,p:P},salt:this.salt!.toString("base64"),iv:iv.toString("base64"),tag:cipher.getAuthTag().toString("base64"),ciphertext:ciphertext.toString("base64")};
     await mkdir(dirname(this.filePath),{recursive:true});
     const temp=join(dirname(this.filePath),"."+randomBytes(8).toString("hex")+".tmp");
