@@ -8,7 +8,7 @@ function dataDir():string {
   return portable ? join(portable,"portable-data") : join(app.getPath("userData"),"data");
 }
 function assertTrustedSender(event: Electron.IpcMainInvokeEvent):void {
-  if (!win || event.sender !== win.webContents || !event.senderFrame.url.startsWith("file://")) {
+  if (!win || event.sender !== win.webContents || event.senderFrame?.url.startsWith("file://") !== true) {
     throw new Error("IPC_SENDER_REJECTED");
   }
 }
