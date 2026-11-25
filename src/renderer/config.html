@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SecureChat — サーバー接続設定</title>
+<link rel="stylesheet" href="config.css">
+</head>
+<body>
+<main>
+  <img class="logo" src="assets/securechat-horizontal.svg" alt="SecureChat">
+  <p class="eyebrow">DESKTOP CONNECTION SETUP</p>
+  <h1>SecureChatに接続</h1>
+  <p class="intro">SecureChat本体が稼働しているHTTPSアドレスを入力してください。ログイン、連絡先、暗号化チャット、端末管理、SecureDropは接続先のSecureChatと同じ機能・アカウントを使用します。</p>
+  <form id="server-form">
+    <label for="server-url">サーバーURL</label>
+    <input id="server-url" type="url" inputmode="url" placeholder="https://your-securechat-domain.example" autocomplete="url" required maxlength="2048">
+    <p class="hint">ドメインのルートURLのみ入力してください。パス、ユーザー名、パスワード、クエリは指定できません。</p>
+    <button id="connect" type="submit">保存して接続</button>
+  </form>
+  <p id="error" role="alert" aria-live="polite"></p>
+  <section class="notice">
+    <strong>接続先について</strong>
+    <p>このアプリは入力したSecureChatサーバーのWebアプリを安全な分離設定で表示します。接続先が未設定の場合、オンラインログインやメッセージ送受信はできません。</p>
+  </section>
+  <footer>通信はHTTPSで行われます。ログインCookieと暗号化端末データはこのアプリのユーザープロファイルに保存されます。</footer>
+</main>
+<script src="config.js"></script>
+</body>
+</html>
