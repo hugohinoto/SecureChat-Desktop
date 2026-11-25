@@ -21,5 +21,5 @@ test("detects ciphertext tampering",async()=>{const f=await fixture();try{
  const reopened=new VaultStore(f.file);await assert.rejects(()=>reopened.unlock("correct horse battery staple"),/VAULT_UNLOCK_FAILED/);assert.equal(reopened.unlocked,false);
 }finally{await f.cleanup();}});
 test("requires unlocked vault for reading",async()=>{const f=await fixture();try{
- const v=new VaultStore(f.file);await assert.rejects(()=>Promise.resolve(v.snapshot()),/VAULT_LOCKED/);
+ const v=new VaultStore(f.file);assert.throws(()=>v.snapshot(),/VAULT_LOCKED/);
 }finally{await f.cleanup();}});
