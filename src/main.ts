@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, Menu, session, shell } from "electron";
 import { join } from "node:path";
 import { mkdir, readFile, rename, writeFile, rm } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
+import { validateServerUrl } from "./server-url";
 
 type ServerConfig = { serverUrl: string };
 let remoteWindow: BrowserWindow | null = null;
@@ -14,20 +15,6 @@ function configurePortableProfile(): void {
   const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
   if (portableDir) app.setPath("userData", join(portableDir, "portable-data"));
   configPath = join(app.getPath("userData"), "server-config.json");
-}
-
-function validateServerUrl(value: unknown): string {
-  if (typeof value !== "string" || value.length > 2048) throw new Error("SERVER_URL_INVALID");
-  let parsed: URL;
-  try { parsed = new URL(value.trim()); } catch { throw new Error("SERVER_URL_INVALID"); }
-  const localDevelopment = process.env.SECURECHAT_ALLOW_INSECURE_DEV === "1" &&
-    (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost" || parsed.hostname === "[::1]");
-  if (parsed.protocol !== "https:" && !(localDevelopment && parsed.protocol === "http:")) {
-    throw new Error("SERVER_URL_HTTPS_REQUIRED");
-  }
-  if (parsed.username || parsed.password || parsed.search || parsed.hash) throw new Error("SERVER_URL_INVALID");
-  if (parsed.pathname !== "/" && parsed.pathname !== "") throw new Error("SERVER_URL_ORIGIN_ONLY");
-  return parsed.origin;
 }
 
 async function readServerConfig(): Promise<string | null> {
