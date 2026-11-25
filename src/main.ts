@@ -3,16 +3,17 @@ import { join } from "node:path";
 import { mkdir, readFile, rename, writeFile, rm } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { validateServerUrl } from "./server-url";
+import { VaultStore } from "./vault";
 
 type ServerConfig = { serverUrl: string };
-
-// Public production endpoint: first launch connects here without asking the user.
 const DEFAULT_SERVER_URL = "https://securechat.hugohinoto.workers.dev";
 let remoteWindow: BrowserWindow | null = null;
+let localWindow: BrowserWindow | null = null;
 let configWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 let configuredServerUrl: string | null = null;
 let configPath = "";
+let vault: VaultStore;
 
 function configurePortableProfile(): void {
   const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
@@ -47,12 +48,14 @@ function isTrustedConfigSender(event: Electron.IpcMainInvokeEvent): boolean {
   return !!configWindow && event.sender === configWindow.webContents &&
     event.senderFrame?.url.startsWith("file://") === true;
 }
-
+function isTrustedLocalSender(event: Electron.IpcMainInvokeEvent): boolean {
+  return !!localWindow && event.sender === localWindow.webContents &&
+    event.senderFrame?.url.startsWith("file://") === true;
+}
 function closeSplash(): void {
   if (splashWindow && !splashWindow.isDestroyed()) splashWindow.close();
   splashWindow = null;
 }
-
 function createSplash(): void {
   splashWindow = new BrowserWindow({
     width: 720, height: 405, frame: false, resizable: false, movable: false,
@@ -62,7 +65,6 @@ function createSplash(): void {
   });
   void splashWindow.loadFile(join(__dirname, "renderer", "splash.html"));
 }
-
 function createConfigWindow(message = ""): void {
   if (configWindow && !configWindow.isDestroyed()) {
     configWindow.focus();
@@ -85,14 +87,34 @@ function createConfigWindow(message = ""): void {
   void configWindow.loadFile(join(__dirname, "renderer", "config.html"));
   if (message) configWindow.webContents.once("did-finish-load", () => configWindow?.webContents.send("config:error", message));
 }
-
+function createLocalWindow(): void {
+  if (localWindow && !localWindow.isDestroyed()) { localWindow.show(); localWindow.focus(); return; }
+  if (remoteWindow && !remoteWindow.isDestroyed()) { remoteWindow.destroy(); remoteWindow = null; }
+  localWindow = new BrowserWindow({
+    width: 1120, height: 780, minWidth: 680, minHeight: 520,
+    title: "SecureChat Desktop — オフライン保管庫",
+    icon: join(__dirname, "renderer", "assets", "securechat-icon.svg"),
+    backgroundColor: "#10151d", show: false,
+    webPreferences: {
+      preload: join(__dirname, "preload.js"),
+      contextIsolation: true, nodeIntegration: false, sandbox: true,
+      webSecurity: true, devTools: !app.isPackaged
+    }
+  });
+  const current = localWindow;
+  current.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  current.webContents.on("will-navigate", (event, url) => {
+    if (!url.startsWith("file://")) event.preventDefault();
+  });
+  current.once("ready-to-show", () => { current.show(); closeSplash(); });
+  current.on("closed", () => { if (localWindow === current) localWindow = null; });
+  void current.loadFile(join(__dirname, "renderer", "index.html"));
+}
 function createRemoteWindow(serverUrl: string): void {
   const origin = validateServerUrl(serverUrl);
   configuredServerUrl = origin;
-  if (remoteWindow && !remoteWindow.isDestroyed()) {
-    remoteWindow.destroy();
-    remoteWindow = null;
-  }
+  if (localWindow && !localWindow.isDestroyed()) { localWindow.destroy(); localWindow = null; }
+  if (remoteWindow && !remoteWindow.isDestroyed()) { remoteWindow.destroy(); remoteWindow = null; }
   remoteWindow = new BrowserWindow({
     width: 1280, height: 850, minWidth: 760, minHeight: 600,
     title: "SecureChat Desktop",
@@ -122,15 +144,15 @@ function createRemoteWindow(serverUrl: string): void {
   });
   current.webContents.on("did-finish-load", () => {
     if (current !== remoteWindow || current.isDestroyed()) return;
-    current.show();
-    closeSplash();
+    current.show(); closeSplash();
     if (configWindow && !configWindow.isDestroyed()) configWindow.close();
   });
   current.webContents.on("did-fail-load", (_event, code, _description, _validatedURL, isMainFrame) => {
     if (!isMainFrame || current !== remoteWindow || current.isDestroyed()) return;
-    current.hide();
+    current.destroy();
+    if (remoteWindow === current) remoteWindow = null;
     closeSplash();
-    createConfigWindow("サーバーへ接続できませんでした。URLとネットワークを確認してください。 (ERR " + code + ")");
+    createLocalWindow();
   });
   current.on("closed", () => { if (remoteWindow === current) remoteWindow = null; });
   void current.loadURL(origin);
@@ -148,11 +170,40 @@ function registerIpc(): void {
     createRemoteWindow(serverUrl);
     return { saved: true };
   });
+  ipcMain.handle("vault:status", async (event) => {
+    if (!isTrustedLocalSender(event)) throw new Error("IPC_SENDER_REJECTED");
+    return { exists: await vault.exists(), unlocked: vault.unlocked };
+  });
+  ipcMain.handle("vault:create", async (event, password: unknown) => {
+    if (!isTrustedLocalSender(event) || typeof password !== "string") throw new Error("IPC_SENDER_REJECTED");
+    await vault.create(password);
+  });
+  ipcMain.handle("vault:unlock", async (event, password: unknown) => {
+    if (!isTrustedLocalSender(event) || typeof password !== "string") throw new Error("IPC_SENDER_REJECTED");
+    await vault.unlock(password);
+  });
+  ipcMain.handle("vault:lock", (event) => {
+    if (!isTrustedLocalSender(event)) throw new Error("IPC_SENDER_REJECTED");
+    vault.lock();
+  });
+  ipcMain.handle("vault:snapshot", (event) => {
+    if (!isTrustedLocalSender(event)) throw new Error("IPC_SENDER_REJECTED");
+    return vault.snapshot();
+  });
+  ipcMain.handle("conversation:create", async (event, title: unknown) => {
+    if (!isTrustedLocalSender(event) || typeof title !== "string") throw new Error("IPC_SENDER_REJECTED");
+    return vault.createConversation(title);
+  });
+  ipcMain.handle("message:add-local", async (event, id: unknown, message: unknown) => {
+    if (!isTrustedLocalSender(event) || typeof id !== "string" || typeof message !== "string") throw new Error("IPC_SENDER_REJECTED");
+    return vault.addLocalMessage(id, message);
+  });
 }
-
 function installApplicationMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     { label: "SecureChat", submenu: [
+      { label: "オンラインに接続", click: () => { if (configuredServerUrl) createRemoteWindow(configuredServerUrl); else void readServerConfig().then(url => createRemoteWindow(url || DEFAULT_SERVER_URL)); } },
+      { label: "オフライン保管庫を開く", click: () => createLocalWindow() },
       { label: "サーバー接続先を変更…", click: () => createConfigWindow() },
       { label: "再接続", click: () => { if (configuredServerUrl) createRemoteWindow(configuredServerUrl); } },
       { type: "separator" }, { role: "quit", label: "終了" }
@@ -167,25 +218,22 @@ configurePortableProfile();
 app.setAppUserModelId("jp.hugohinoto.securechat.desktop");
 app.whenReady().then(async () => {
   await mkdir(app.getPath("userData"), { recursive: true });
-  registerIpc();
-  installApplicationMenu();
-  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-    callback(permission === "notifications");
-  });
+  vault = new VaultStore(join(app.getPath("userData"), "vault.scv"));
+  registerIpc(); installApplicationMenu();
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => callback(permission === "notifications"));
   session.defaultSession.setPermissionCheckHandler((_webContents, permission) => permission === "notifications");
   createSplash();
   try {
     const envUrl = process.env.SECURECHAT_SERVER_URL;
     const savedUrl = envUrl ? validateServerUrl(envUrl) : (await readServerConfig()) || DEFAULT_SERVER_URL;
     createRemoteWindow(savedUrl);
-  } catch (error) {
-    closeSplash();
-    createConfigWindow(error instanceof Error ? error.message : "サーバー設定を読み込めませんでした。");
+  } catch {
+    closeSplash(); createLocalWindow();
   }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       if (configuredServerUrl) createRemoteWindow(configuredServerUrl);
-      else createConfigWindow();
+      else createLocalWindow();
     }
   });
 });
