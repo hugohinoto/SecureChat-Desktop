@@ -3,6 +3,11 @@
 ## Startup and brand
 The horizontal SecureChat logo is shown during startup. The square mark is used for the Windows application and window icon.
 
+## Installation-free Windows portable app
+The Windows release is a single portable EXE, not an installer. Double-click it to launch; Node.js, npm, Electron, and other application runtimes do not need to be installed separately. The app extracts its bundled runtime into a temporary directory while it runs. It does not register an installed application, create Start menu entries, or require administrator privileges.
+
+On first launch, a `portable-data` folder is created beside the EXE. It stores the server URL, login session, and browser-side device state. Keep this folder with the EXE when moving the app to another PC. The EXE can start without that folder, but the saved settings and login session will not travel with it.
+
 ## First connection
 1. Start SecureChat Desktop.
 2. Enter the HTTPS root URL of the deployed SecureChat service.
