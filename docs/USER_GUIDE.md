@@ -1,5 +1,8 @@
 # SecureChat Desktop - User guide
 
+## Startup screen and app icon
+The startup splash screen uses the supplied horizontal SecureChat logo. The Windows executable and application window use the supplied square mark as their icon. The artwork is included as local SVG assets; no network request is needed to display it.
+
 ## First launch
 1. Start SecureChat Desktop.
 2. Create a master password of at least 12 characters.
