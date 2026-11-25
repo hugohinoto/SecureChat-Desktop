@@ -18,9 +18,9 @@ function registerIpc():void {
 }
 function createWindow():void {
   win=new BrowserWindow({width:1080,height:760,minWidth:720,minHeight:560,backgroundColor:"#10151d",title:"SecureChat Desktop",
-    webPreferences:{preload:join(__dirname,"preload.js"),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,allowRunningInsecureContent:false}});
+    webPreferences:{preload:join(__dirname,"preload.js"),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,allowRunningInsecureContent:false,devTools:!app.isPackaged}});
   win.webContents.setWindowOpenHandler(({url})=>{if(url.startsWith("https://")) void shell.openExternal(url);return {action:"deny"};});
-  win.webContents.on("will-navigate",(event,url)=>{if(!url.startsWith("file://")) event.preventDefault();});
+  win.webContents.on("will-navigate",(event,url)=>{if(url!==win?.webContents.getURL()) event.preventDefault();});
   void win.loadFile(join(__dirname,"renderer","index.html"));
   win.on("closed",()=>{vault.lock();win=null;});
 }
