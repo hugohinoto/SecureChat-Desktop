@@ -41,3 +41,24 @@ test("offline fallback retries the configured server and preserves the vault unt
   assert.match(main, /vault\.lock\(\);\s+localWindow\.destroy\(\)/);
   assert.match(main, /createLocalWindow\(true\)/);
 });
+
+test("connection notifications are transition-based, privacy-safe, and accessible", async () => {
+  const main = await readFile("src/main.ts", "utf8");
+  const preload = await readFile("src/preload.ts", "utf8");
+  const shared = await readFile("src/shared.ts", "utf8");
+  const html = await readFile("src/renderer/index.html", "utf8");
+  const js = await readFile("src/renderer/app.js", "utf8");
+  const css = await readFile("src/renderer/styles.css", "utf8");
+  assert.match(main, /if \(connectionState === next\) return/);
+  assert.match(main, /previous === "unknown"\) return/);
+  assert.match(main, /Notification\.isSupported\(\)/);
+  assert.match(main, /next === "online" \|\| !BrowserWindow\.getFocusedWindow\(\)/);
+  assert.match(main, /connection:status/);
+  assert.match(preload, /onConnectionState/);
+  assert.match(shared, /getConnectionState/);
+  assert.match(html, /id="connection-toast"[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.match(js, /再接続中/);
+  assert.match(js, /メッセージは送信されません/);
+  assert.match(css, /prefers-reduced-motion:reduce/);
+  assert.doesNotMatch(main, /messages\[next\].*messageBody|通知本文.*message\.text/);
+});
