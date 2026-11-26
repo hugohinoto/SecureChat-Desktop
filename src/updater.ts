@@ -90,12 +90,24 @@ export async function downloadAndStageUpdate(update: AvailableUpdate, userDataPa
   await rm(marker, { force: true });
   await writeFile(pending, JSON.stringify({ version: update.version, markerPath: marker }), { mode: 0o600 });
 
+  return { helperPath: staged };
+}
+
+export async function launchStagedUpdate(version: string, userDataPath: string): Promise<void> {
+  if (process.platform !== "win32" || !process.env.PORTABLE_EXECUTABLE_FILE) throw new Error("PORTABLE_UPDATE_NOT_SUPPORTED");
+  if (!parseVersion(version)) throw new Error("UPDATE_VERSION_INVALID");
+  const executable = resolve(process.env.PORTABLE_EXECUTABLE_FILE);
+  const staged = executable + ".securechat-update.exe";
+  const backup = executable + ".securechat-rollback.exe";
+  const marker = join(userDataPath, `update-healthy-${version}.flag`);
+  const pending = join(userDataPath, "pending-update.json");
   const script = [
     "$ErrorActionPreference = 'Stop'",
     `$exe = ${toPowerShellLiteral(executable)}`,
     `$stage = ${toPowerShellLiteral(staged)}`,
     `$backup = ${toPowerShellLiteral(backup)}`,
     `$marker = ${toPowerShellLiteral(marker)}`,
+    `$pending = ${toPowerShellLiteral(pending)}`,
     `$oldPid = ${process.pid}`,
     "Wait-Process -Id $oldPid -ErrorAction SilentlyContinue",
     "Start-Sleep -Seconds 2",
@@ -108,7 +120,7 @@ export async function downloadAndStageUpdate(update: AvailableUpdate, userDataPa
     "  if (Test-Path -LiteralPath $marker) {",
     "    Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue",
     "    Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue",
-    "    Remove-Item -LiteralPath ${toPowerShellLiteral(pending)} -Force -ErrorAction SilentlyContinue",
+    "    Remove-Item -LiteralPath $pending -Force -ErrorAction SilentlyContinue",
     "    exit 0",
     "  }",
     "  Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $exe } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
@@ -124,14 +136,11 @@ export async function downloadAndStageUpdate(update: AvailableUpdate, userDataPa
     "  }",
     "}",
     "Remove-Item -LiteralPath $stage -Force -ErrorAction SilentlyContinue",
-    "Remove-Item -LiteralPath ${toPowerShellLiteral(pending)} -Force -ErrorAction SilentlyContinue"
-  ].join("\r\n");
-  const helperPath = join(userDataPath, "apply-update.ps1");
-  await writeFile(helperPath, script, { encoding: "utf8", mode: 0o600 });
+    "Remove-Item -LiteralPath $pending -Force -ErrorAction SilentlyContinue"
+  ].join("\\r\\n");
   const encoded = Buffer.from(script, "utf16le").toString("base64");
   const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded], {
     detached: true, stdio: "ignore", windowsHide: true
   });
   child.unref();
-  return { helperPath };
 }
