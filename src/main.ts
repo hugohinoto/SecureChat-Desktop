@@ -1,5 +1,6 @@
-import { app, BrowserWindow, ipcMain, Menu, net, Notification, session, shell } from "electron";
-import { join } from "node:path";
+import { app, BrowserWindow, ipcMain, Menu, net, Notification, safeStorage, session, shell } from "electron";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { mkdir, readFile, rename, writeFile, rm } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { validateServerUrl } from "./server-url";
@@ -13,6 +14,9 @@ let configWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 let configuredServerUrl: string | null = null;
 let configPath = "";
+let sessionCookiePath = "";
+let sessionCookie: string | null = null;
+let sessionCookieOrigin: string | null = null;
 let vault: VaultStore;
 let autoReconnectEnabled = false;
 let reconnectInFlight = false;
@@ -24,9 +28,8 @@ function setConnectionState(next: Exclude<ConnectionState, "unknown">): void {
   if (connectionState === next) return;
   const previous = connectionState;
   connectionState = next;
-  if (previous !== "unknown" && localWindow && !localWindow.isDestroyed()) {
-    localWindow.webContents.send("connection:state", next);
-  }
+  if (previous !== "unknown" && localWindow && !localWindow.isDestroyed()) localWindow.webContents.send("connection:state", next);
+  if (previous !== "unknown" && remoteWindow && !remoteWindow.isDestroyed()) remoteWindow.webContents.send("connection:state", next);
   // Do not announce the initial state; only meaningful transitions produce notifications.
   if (previous === "unknown") return;
   const messages: Record<Exclude<ConnectionState, "unknown">, { title: string; body: string }> = {
@@ -44,6 +47,7 @@ function configurePortableProfile(): void {
   const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
   if (portableDir) app.setPath("userData", join(portableDir, "portable-data"));
   configPath = join(app.getPath("userData"), "server-config.json");
+  sessionCookiePath = join(app.getPath("userData"), "desktop-session.bin");
 }
 
 async function readServerConfig(): Promise<string | null> {
@@ -69,13 +73,138 @@ async function writeServerConfig(serverUrl: string): Promise<void> {
   }
 }
 
+async function loadStoredSession(): Promise<void> {
+  if (!safeStorage.isEncryptionAvailable()) return;
+  try {
+    const encrypted = await readFile(sessionCookiePath);
+    const stored = JSON.parse(safeStorage.decryptString(encrypted)) as { origin?: string; cookie?: string };
+    if (typeof stored.origin === "string" && typeof stored.cookie === "string" &&
+        /^(?:__Host-sc_session|sc_session)=[A-Za-z0-9_-]{40,128}$/.test(stored.cookie)) {
+      sessionCookieOrigin = validateServerUrl(stored.origin);
+      sessionCookie = stored.cookie;
+    }
+  } catch { /* A missing or unreadable session is treated as signed out. */ }
+}
+async function persistSession(): Promise<void> {
+  if (!sessionCookie || !sessionCookieOrigin || !safeStorage.isEncryptionAvailable()) {
+    await rm(sessionCookiePath, { force: true }).catch(() => undefined);
+    return;
+  }
+  const encrypted = safeStorage.encryptString(JSON.stringify({ origin: sessionCookieOrigin, cookie: sessionCookie }));
+  const tempPath = sessionCookiePath + "." + randomBytes(8).toString("hex") + ".tmp";
+  try {
+    await writeFile(tempPath, encrypted, { mode: 0o600, flag: "wx" });
+    await rename(tempPath, sessionCookiePath);
+  } catch (error) {
+    await rm(tempPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
+}
+async function clearStoredSession(): Promise<void> {
+  sessionCookie = null;
+  sessionCookieOrigin = null;
+  await rm(sessionCookiePath, { force: true }).catch(() => undefined);
+}
+function isTrustedRemoteSender(event: Electron.IpcMainInvokeEvent): boolean {
+  return !!remoteWindow && event.sender === remoteWindow.webContents &&
+    isWithinBundledDirectory(event.senderFrame?.url || "", join(__dirname, "renderer", "web-client"));
+}
+async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Promise<{ status: number; body: string | Uint8Array; contentType: string }> {
+  if (typeof pathValue !== "string" || pathValue.length > 2048 || !pathValue.startsWith("/api/") ||
+      pathValue.includes(String.fromCharCode(92))) throw new Error("DESKTOP_API_PATH_REJECTED");
+  if (!requestValue || typeof requestValue !== "object") throw new Error("DESKTOP_API_REQUEST_INVALID");
+  const request = requestValue as { method?: unknown; body?: unknown; contentType?: unknown; headers?: unknown };
+  const method = typeof request.method === "string" ? request.method.toUpperCase() : "GET";
+  if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method)) throw new Error("DESKTOP_API_METHOD_REJECTED");
+  const requestBody = request.body;
+  const bodyIsText = typeof requestBody === "string";
+  const bodyIsBytes = requestBody instanceof Uint8Array || requestBody instanceof ArrayBuffer;
+  if (requestBody !== undefined && requestBody !== null &&
+      (!bodyIsText && !bodyIsBytes ||
+       (bodyIsText ? Buffer.byteLength(requestBody as string, "utf8") : (requestBody instanceof ArrayBuffer ? requestBody.byteLength : (requestBody as Uint8Array).byteLength)) > 32 * 1024 * 1024)) {
+    throw new Error("DESKTOP_API_BODY_REJECTED");
+  }
+  const origin = validateServerUrl(configuredServerUrl || DEFAULT_SERVER_URL);
+  const target = new URL(pathValue, origin);
+  if (target.origin !== origin || !target.pathname.startsWith("/api/")) throw new Error("DESKTOP_API_PATH_REJECTED");
+  if (sessionCookieOrigin !== origin) {
+    sessionCookie = null;
+    sessionCookieOrigin = null;
+    await rm(sessionCookiePath, { force: true }).catch(() => undefined);
+  }
+  const headers = new Headers({ Accept: "application/json", Origin: origin });
+  if (sessionCookie) headers.set("Cookie", sessionCookie);
+  if (request.contentType === "application/json") headers.set("Content-Type", "application/json");
+  else if (typeof request.contentType === "string" && request.contentType.startsWith("application/octet-stream")) headers.set("Content-Type", "application/octet-stream");
+  const allowedDesktopHeaders = new Set([
+    "x-secure-drop-upload-id", "x-secure-drop-original-size", "x-secure-drop-stored-size",
+    "x-secure-drop-payload", "x-secure-drop-recipient-id", "x-secure-drop-key-envelope",
+    "x-secure-drop-priority"
+  ]);
+  if (request.headers !== undefined) {
+    if (!request.headers || typeof request.headers !== "object" || Array.isArray(request.headers)) throw new Error("DESKTOP_API_HEADERS_REJECTED");
+    for (const [name, value] of Object.entries(request.headers as Record<string, unknown>)) {
+      const normalized = name.toLowerCase();
+      if (!allowedDesktopHeaders.has(normalized) || typeof value !== "string" ||
+          value.length > 32768 || value.includes(String.fromCharCode(13)) || value.includes(String.fromCharCode(10))) throw new Error("DESKTOP_API_HEADERS_REJECTED");
+      headers.set(normalized, value);
+    }
+  }
+  const response = await fetch(target, {
+    method, headers, body: requestBody == null ? undefined : (requestBody instanceof ArrayBuffer ? Buffer.from(requestBody) : requestBody instanceof Uint8Array ? Buffer.from(requestBody) : requestBody as string),
+    redirect: "manual", signal: AbortSignal.timeout(120000)
+  });
+  const responseHeaders = response.headers as Headers & { getSetCookie?: () => string[] };
+  const setCookies = responseHeaders.getSetCookie?.() || [response.headers.get("set-cookie") || ""];
+  for (const line of setCookies) {
+    const pair = line.split(";", 1)[0].trim();
+    const separator = pair.indexOf("=");
+    if (separator < 0) continue;
+    const name = pair.slice(0, separator);
+    const value = pair.slice(separator + 1);
+    if (name !== "__Host-sc_session" && name !== "sc_session") continue;
+    if (!value) await clearStoredSession();
+    else {
+      sessionCookie = name + "=" + value;
+      sessionCookieOrigin = origin;
+      await persistSession();
+    }
+  }
+  if (target.pathname === "/api/auth/logout" && response.ok) await clearStoredSession();
+  const contentType = response.headers.get("content-type") || "application/json";
+  if (contentType.startsWith("application/octet-stream")) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > 32 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
+    return { status: response.status, body: bytes, contentType };
+  }
+  const body = await response.text();
+  if (Buffer.byteLength(body, "utf8") > 32 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
+  return { status: response.status, body, contentType };
+}
+function isWithinBundledDirectory(urlValue: string, directory: string): boolean {
+  try {
+    const parsed = new URL(urlValue);
+    if (parsed.protocol !== "file:") return false;
+    const targetPath = resolve(fileURLToPath(parsed));
+    const rootPath = resolve(directory);
+    const relativePath = relative(rootPath, targetPath);
+    return relativePath.length > 0 && relativePath !== ".." &&
+      !relativePath.startsWith(".." + sep) && !isAbsolute(relativePath);
+  } catch { return false; }
+}
+function isExactBundledFile(urlValue: string, filePath: string): boolean {
+  try {
+    const parsed = new URL(urlValue);
+    return parsed.protocol === "file:" && resolve(fileURLToPath(parsed)) === resolve(filePath);
+  } catch { return false; }
+}
 function isTrustedConfigSender(event: Electron.IpcMainInvokeEvent): boolean {
   return !!configWindow && event.sender === configWindow.webContents &&
-    event.senderFrame?.url.startsWith("file://") === true;
+    isExactBundledFile(event.senderFrame?.url || "", join(__dirname, "renderer", "config.html"));
 }
 function isTrustedLocalSender(event: Electron.IpcMainInvokeEvent): boolean {
   return !!localWindow && event.sender === localWindow.webContents &&
-    event.senderFrame?.url.startsWith("file://") === true;
+    isExactBundledFile(event.senderFrame?.url || "", join(__dirname, "renderer", "web-client", "offline.html"));
 }
 function closeSplash(): void {
   if (splashWindow && !splashWindow.isDestroyed()) splashWindow.close();
@@ -130,14 +259,14 @@ function createLocalWindow(enableAutoReconnect = false): void {
   const current = localWindow;
   current.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   current.webContents.on("will-navigate", (event, url) => {
-    if (!url.startsWith("file://")) event.preventDefault();
+    if (!isExactBundledFile(url, join(__dirname, "renderer", "web-client", "offline.html"))) event.preventDefault();
   });
   current.webContents.once("did-finish-load", () => {
     if (connectionState !== "unknown") current.webContents.send("connection:state", connectionState);
   });
   current.once("ready-to-show", () => { current.show(); closeSplash(); setConnectionState("offline"); });
   current.on("closed", () => { if (localWindow === current) localWindow = null; });
-  void current.loadFile(join(__dirname, "renderer", "index.html"));
+  void current.loadFile(join(__dirname, "renderer", "web-client", "offline.html"));
 }
 function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): void {
   const origin = validateServerUrl(serverUrl);
@@ -153,6 +282,7 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
     icon: join(__dirname, "renderer", "assets", "securechat-icon.svg"),
     backgroundColor: "#10151d", show: false,
     webPreferences: {
+      preload: join(__dirname, "web-preload.js"),
       contextIsolation: true, nodeIntegration: false, sandbox: true,
       webSecurity: true, allowRunningInsecureContent: false,
       webviewTag: false, devTools: !app.isPackaged
@@ -166,24 +296,25 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
     } catch { /* Invalid and non-HTTPS popups are denied. */ }
     return { action: "deny" };
   });
+  const isBundledClientFile = (url: string): boolean => isWithinBundledDirectory(url, join(__dirname, "renderer", "web-client"));
   current.webContents.on("will-navigate", (event, url) => {
-    try { if (new URL(url).origin !== origin) event.preventDefault(); }
-    catch { event.preventDefault(); }
+    if (isBundledClientFile(url)) return;
+    event.preventDefault();
+    try { const target = new URL(url); if (target.protocol === "https:") void shell.openExternal(target.toString()); } catch {}
   });
   current.webContents.on("will-redirect", (event, url) => {
-    try { if (new URL(url).origin !== origin) event.preventDefault(); }
-    catch { event.preventDefault(); }
+    if (!isBundledClientFile(url)) event.preventDefault();
   });
   current.webContents.on("did-finish-load", () => {
     if (current !== remoteWindow || current.isDestroyed()) return;
     current.show(); closeSplash();
     setConnectionState("online");
+    autoReconnectEnabled = true;
     if (keepOfflineUntilReady && localWindow && !localWindow.isDestroyed()) {
       vault.lock();
       localWindow.destroy();
       localWindow = null;
     }
-    autoReconnectEnabled = false;
     if (configWindow && !configWindow.isDestroyed()) configWindow.close();
   });
   current.webContents.on("did-fail-load", (_event, code, _description, _validatedURL, isMainFrame) => {
@@ -195,25 +326,37 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
     if (!localWindow || localWindow.isDestroyed()) createLocalWindow(true);
   });
   current.on("closed", () => { if (remoteWindow === current) remoteWindow = null; });
-  void current.loadURL(origin);
+  void current.loadFile(join(__dirname, "renderer", "web-client", "index.html"));
 }
 
 async function checkForServerAndReconnect(): Promise<void> {
-  if (!autoReconnectEnabled || reconnectInFlight || !localWindow || localWindow.isDestroyed() || (remoteWindow && !remoteWindow.isDestroyed())) return;
+  if (!autoReconnectEnabled || reconnectInFlight) return;
   reconnectInFlight = true;
   try {
     const serverUrl = configuredServerUrl || await readServerConfig() || DEFAULT_SERVER_URL;
     const origin = validateServerUrl(serverUrl);
-    // A response from the configured HTTPS origin confirms reachability; failed probes leave the local vault untouched.
-    const response = await net.fetch(origin, { method: "HEAD", redirect: "manual", signal: AbortSignal.timeout(5000) });
-    if (response.status >= 200 && response.status < 500 && response.url.startsWith(origin) &&
-        autoReconnectEnabled && localWindow && !localWindow.isDestroyed() &&
-        (!remoteWindow || remoteWindow.isDestroyed())) {
+    let reachable = false;
+    try {
+      const response = await net.fetch(origin + "/api/auth/me", {
+        method: "GET", redirect: "manual", signal: AbortSignal.timeout(5000),
+        headers: { Accept: "application/json" }
+      });
+      reachable = response.status >= 200 && response.status < 500 && response.url.startsWith(origin);
+    } catch { reachable = false; }
+
+    const onlineWindow = remoteWindow && !remoteWindow.isDestroyed() ? remoteWindow : null;
+    const offlineWindow = localWindow && !localWindow.isDestroyed() ? localWindow : null;
+    if (onlineWindow && !reachable) {
+      setConnectionState("offline");
+      onlineWindow.destroy();
+      if (remoteWindow === onlineWindow) remoteWindow = null;
+      if (!offlineWindow) createLocalWindow(true);
+      return;
+    }
+    if (offlineWindow && reachable && (!remoteWindow || remoteWindow.isDestroyed())) {
       setConnectionState("reconnecting");
       createRemoteWindow(origin, true);
     }
-  } catch {
-    // Keep the offline vault available and retry on the next interval.
   } finally {
     reconnectInFlight = false;
   }
@@ -235,6 +378,14 @@ function registerIpc(): void {
     await writeServerConfig(serverUrl);
     createRemoteWindow(serverUrl);
     return { saved: true };
+  });
+  ipcMain.handle("connection:remote-status", (event) => {
+    if (!isTrustedRemoteSender(event)) throw new Error("IPC_SENDER_REJECTED");
+    return connectionState === "unknown" ? "offline" : connectionState;
+  });
+  ipcMain.handle("api:request", async (event, path: unknown, request: unknown) => {
+    if (!isTrustedRemoteSender(event)) throw new Error("IPC_SENDER_REJECTED");
+    return requestDesktopApi(path, request);
   });
   ipcMain.handle("connection:status", (event) => {
     if (!isTrustedLocalSender(event)) throw new Error("IPC_SENDER_REJECTED");
@@ -289,6 +440,7 @@ app.setAppUserModelId("jp.hugohinoto.securechat.desktop");
 app.whenReady().then(async () => {
   await mkdir(app.getPath("userData"), { recursive: true });
   vault = new VaultStore(join(app.getPath("userData"), "vault.scv"));
+  await loadStoredSession();
   registerIpc(); installApplicationMenu();
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => callback(permission === "notifications"));
   session.defaultSession.setPermissionCheckHandler((_webContents, permission) => permission === "notifications");
@@ -296,7 +448,14 @@ app.whenReady().then(async () => {
   try {
     const envUrl = process.env.SECURECHAT_SERVER_URL;
     const savedUrl = envUrl ? validateServerUrl(envUrl) : (await readServerConfig()) || DEFAULT_SERVER_URL;
-    createRemoteWindow(savedUrl);
+    configuredServerUrl = savedUrl;
+    const probe = await net.fetch(savedUrl + "/api/auth/me", {
+      method: "GET", redirect: "manual", signal: AbortSignal.timeout(5000),
+      headers: { Accept: "application/json" }
+    });
+    if (probe.status >= 200 && probe.status < 500 && probe.url.startsWith(savedUrl)) createRemoteWindow(savedUrl);
+    else { closeSplash(); createLocalWindow(true); }
+
   } catch {
     closeSplash(); createLocalWindow(true);
   }

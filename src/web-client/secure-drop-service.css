@@ -1,0 +1,145 @@
+/* Standalone SecureDrop service */
+.service-body { min-height:100vh; }
+.service-topbar {
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  width:min(1120px,calc(100% - 36px)); margin:18px auto 0; padding:13px 16px;
+  border:1px solid var(--sc-border); border-radius:15px; background:rgba(16,26,43,.92);
+}
+.service-back { color:#c6eff7; font-size:13px; font-weight:750; text-decoration:none; }
+.service-back:hover { color:#fff; }
+.service-account { display:flex; align-items:center; gap:12px; color:var(--sc-muted); font-size:11px; }
+.service-account button { border:1px solid var(--sc-border); border-radius:8px; padding:7px 10px; color:#d8e6f7; background:rgba(255,255,255,.04); cursor:pointer; }
+.service-shell { width:min(1120px,calc(100% - 36px)); margin:24px auto 54px; display:grid; gap:16px; }
+.service-hero {
+  display:flex; align-items:center; gap:17px; padding:23px 24px;
+  border:1px solid rgba(142,215,232,.20); border-radius:18px;
+  background:linear-gradient(120deg,rgba(58,132,157,.16),rgba(44,65,112,.13)),#101a2b;
+}
+.service-icon {
+  flex:0 0 58px; width:58px; height:58px; display:grid; place-items:center;
+  border-radius:16px; color:#e1fbff; font-size:27px; font-weight:850;
+  background:linear-gradient(145deg,#3d86a0,#394f80);
+}
+.service-eyebrow { margin:0 0 4px; color:#89a5c6; font-size:9px; font-weight:800; letter-spacing:1.5px; }
+.service-hero h1 { margin:0; color:#f2f8ff; font-size:25px; letter-spacing:-.5px; }
+.service-hero p:not(.service-eyebrow) { margin:5px 0 0; color:#aebdd0; font-size:12px; }
+.service-status { margin-left:auto; display:flex; align-items:center; gap:7px; white-space:nowrap; color:#a9dfd2; font-size:10px; }
+.service-status i { width:7px; height:7px; border-radius:50%; background:#85d9bc; box-shadow:0 0 10px rgba(133,217,188,.4); }
+.service-notice {
+  padding:12px 15px; border:1px solid rgba(142,215,232,.16); border-radius:12px;
+  color:#b8c7da; background:rgba(69,151,177,.055); font-size:11px; line-height:1.7;
+}
+.service-grid { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(280px,.9fr); gap:16px; }
+.service-card {
+  min-width:0; padding:20px; border:1px solid var(--sc-border); border-radius:16px;
+  background:rgba(16,26,43,.94); box-shadow:0 12px 34px rgba(0,0,0,.14);
+}
+.service-card-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:17px; }
+.service-card-heading h2 { margin:0; color:#ecf4ff; font-size:16px; letter-spacing:-.2px; }
+.service-card-symbol { width:35px; height:35px; display:grid; place-items:center; border:1px solid rgba(142,215,232,.2); border-radius:11px; color:#bdebf4; background:rgba(69,151,177,.1); font-size:19px; }
+.service-field { display:grid; gap:7px; margin:0 0 14px; color:#b9c7d9; font-size:11px; font-weight:700; }
+.service-field select {
+  width:100%; min-height:42px; padding:0 12px; border:1px solid var(--sc-border-strong);
+  border-radius:10px; color:#edf4ff; background:#0b1423; font:inherit;
+}
+.service-file-picker { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:0 0 13px; }
+.service-file-picker span { min-width:0; color:#97a9c1; font-size:10px; overflow-wrap:anywhere; }
+.service-primary-button,.service-secondary-button,.service-primary-link,.service-secondary-link {
+  display:inline-flex; align-items:center; justify-content:center; min-height:39px; padding:8px 13px;
+  border:1px solid rgba(142,215,232,.25); border-radius:10px; color:#e4faff;
+  background:rgba(69,151,177,.16); font-size:11px; font-weight:750; cursor:pointer; text-decoration:none;
+}
+.service-primary-button { width:100%; margin-top:12px; min-height:43px; background:linear-gradient(100deg,#286d86,#3c6297); }
+.service-primary-button:hover:not(:disabled),.service-secondary-button:hover,.service-primary-link:hover { background:rgba(69,151,177,.3); }
+.service-primary-button:disabled { opacity:.45; cursor:not-allowed; }
+.service-priority { display:flex; align-items:flex-start; gap:9px; padding:11px; border:1px solid rgba(242,196,126,.18); border-radius:10px; background:rgba(242,196,126,.045); }
+.service-priority input { margin-top:3px; accent-color:#e8bd73; }
+.service-priority span { display:grid; gap:3px; }
+.service-priority strong { color:#e8d0a8; font-size:11px; }
+.service-priority small { color:#aa9c82; font-size:10px; line-height:1.5; }
+.service-help { margin:10px 0 0; color:#8fa2bb; font-size:10px; line-height:1.65; }
+.service-usage-number { margin-top:12px; color:#eaf7ff; font-size:30px; font-weight:800; letter-spacing:-1px; font-variant-numeric:tabular-nums; }
+.service-usage-label { margin:2px 0 15px; color:#97a9c1; font-size:10px; }
+.service-meter { height:8px; overflow:hidden; border-radius:999px; background:#07111e; }
+.service-meter span { display:block; width:0; height:100%; border-radius:999px; background:linear-gradient(90deg,#3e95a7,#8ed7e8); transition:width .2s ease; }
+.service-limits { display:grid; gap:6px; margin-top:13px; color:#9eafc4; font-size:10px; }
+.service-files-card { margin-top:0; }
+.service-files-heading { align-items:flex-start; }
+.service-files-heading .service-help { margin-top:4px; }
+.service-file-list { display:grid; gap:9px; }
+.service-file-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border:1px solid var(--sc-border); border-radius:11px; background:rgba(255,255,255,.022); }
+.service-file-copy { min-width:0; display:grid; gap:4px; }
+.service-file-copy strong { color:#e8f1ff; font-size:11px; overflow-wrap:anywhere; }
+.service-file-copy span { color:#92a4bd; font-size:10px; line-height:1.5; }
+.service-file-actions { display:flex; flex:0 0 auto; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+.service-file-actions button { min-height:31px; padding:5px 9px; border:1px solid rgba(142,215,232,.19); border-radius:8px; color:#cceef4; background:rgba(69,151,177,.1); font-size:10px; font-weight:700; cursor:pointer; }
+.service-file-actions button:disabled { opacity:.45; cursor:not-allowed; }
+.service-empty { margin:7px 2px; color:#8fa2bb; font-size:11px; }
+.service-pending-card { border-color:rgba(242,196,126,.22); }
+.service-auth-card { padding:28px; border:1px solid var(--sc-border); border-radius:16px; background:rgba(16,26,43,.95); }
+.service-auth-card h2 { margin:0; color:#edf4ff; font-size:17px; }
+.service-auth-card p { color:#a8b9ce; font-size:12px; line-height:1.7; }
+.service-toast {
+  position:fixed; z-index:10; left:50%; bottom:24px; transform:translate(-50%,14px);
+  max-width:min(600px,calc(100% - 32px)); padding:11px 15px; border:1px solid var(--sc-border-strong);
+  border-radius:11px; color:#edf7ff; background:#152238; box-shadow:0 12px 36px rgba(0,0,0,.35);
+  opacity:0; pointer-events:none; transition:opacity .18s ease,transform .18s ease; white-space:pre-wrap; font-size:11px;
+}
+.service-toast.visible { opacity:1; transform:translate(-50%,0); }
+@media(max-width:760px) {
+  .service-shell,.service-topbar { width:calc(100% - 22px); }
+  .service-grid { grid-template-columns:1fr; }
+  .service-hero { align-items:flex-start; flex-wrap:wrap; padding:17px; }
+  .service-status { width:100%; margin-left:75px; }
+  .service-card { padding:16px; }
+  .service-file-row { align-items:flex-start; flex-direction:column; }
+  .service-file-actions { justify-content:flex-start; }
+}
+
+
+/* SecureDrop uses a fixed viewport and switches between focused work panels. */
+html,body.service-body{width:100%;height:100%;min-height:0;overflow:hidden}
+body.service-body{position:fixed;inset:0;display:flex;flex-direction:column}
+.service-topbar{flex:0 0 48px;width:min(1120px,calc(100% - 28px));min-height:42px;margin:7px auto 0;padding:8px 13px}
+.service-shell{display:flex;flex:1 1 auto;flex-direction:column;gap:9px;min-height:0;width:min(1120px,calc(100% - 28px));margin:8px auto 8px;overflow:hidden}
+.service-hero{flex:0 0 auto;padding:11px 15px;gap:12px}
+.service-icon{width:39px;height:39px;flex-basis:39px;border-radius:11px;font-size:19px}
+.service-hero h1{font-size:18px}
+.service-hero p:not(.service-eyebrow){font-size:10px;margin-top:2px}
+.service-notice{flex:0 0 auto;padding:7px 11px;font-size:9px;line-height:1.45}
+.service-view-tabs{display:flex;flex:0 0 auto;gap:6px;padding:4px;border:1px solid var(--sc-border);border-radius:10px;background:#101a2b}
+.service-view-tabs button{flex:1;min-height:34px;border:1px solid transparent;border-radius:7px;color:#9fb1c8;background:transparent;font-size:11px;font-weight:700}
+.service-view-tabs button.active{border-color:rgba(142,215,232,.22);color:#e4f8ff;background:#1a3549}
+#service-content{display:flex;flex:1 1 auto;min-height:0;overflow:hidden}
+#service-content>.service-grid{display:contents}
+#service-content [data-service-view]{display:none;flex:1 1 auto;min-height:0;max-height:100%;overflow:hidden}
+#service-content [data-service-view].active-service-view{display:flex;flex-direction:column}
+#service-content .service-card{width:100%;padding:14px}
+#service-content .service-card-heading{margin-bottom:10px}
+#service-content .service-card-heading h2{font-size:14px}
+#service-content .service-file-list{min-height:0;overflow:auto;overscroll-behavior:contain}
+#service-content .service-files-card{display:none}
+#service-content .service-files-card.active-service-view{display:flex}
+#service-content .service-pending-card{margin-top:0}
+.service-toast{bottom:10px}
+.service-auth-card{align-self:center;max-width:520px;margin:auto}
+@media(max-width:760px){
+ .service-topbar,.service-shell{width:calc(100% - 16px)}
+ .service-topbar{margin-top:5px;padding:7px 9px}
+ .service-shell{margin:6px auto;gap:7px}
+ .service-hero{padding:9px 11px;gap:9px}
+ .service-status{width:auto;margin-left:auto;font-size:9px}
+ .service-notice{font-size:8px;padding:6px 8px}
+ .service-view-tabs button{min-height:38px;font-size:10px}
+ #service-content .service-card{padding:11px}
+ #service-content .service-grid{display:contents}
+ #service-content .service-file-list{max-height:none}
+}
+@media(max-height:650px){
+ .service-hero{padding:7px 10px}
+ .service-icon{width:32px;height:32px;flex-basis:32px}
+ .service-notice{display:none}
+ .service-shell{gap:6px}
+ .service-view-tabs button{min-height:31px}
+ #service-content .service-card{padding:9px}
+}
