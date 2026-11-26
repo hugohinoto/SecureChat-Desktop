@@ -24,7 +24,7 @@ function setConnectionState(next: Exclude<ConnectionState, "unknown">): void {
   if (connectionState === next) return;
   const previous = connectionState;
   connectionState = next;
-  if (localWindow && !localWindow.isDestroyed()) {
+  if (previous !== "unknown" && localWindow && !localWindow.isDestroyed()) {
     localWindow.webContents.send("connection:state", next);
   }
   // Do not announce the initial state; only meaningful transitions produce notifications.
@@ -132,7 +132,10 @@ function createLocalWindow(enableAutoReconnect = false): void {
   current.webContents.on("will-navigate", (event, url) => {
     if (!url.startsWith("file://")) event.preventDefault();
   });
-  current.webContents.once("did-finish-load", () => {\n    if (connectionState !== "unknown") current.webContents.send("connection:state", connectionState);\n  });\n  current.once("ready-to-show", () => { current.show(); closeSplash(); setConnectionState("offline"); });
+  current.webContents.once("did-finish-load", () => {
+    if (connectionState !== "unknown") current.webContents.send("connection:state", connectionState);
+  });
+  current.once("ready-to-show", () => { current.show(); closeSplash(); setConnectionState("offline"); });
   current.on("closed", () => { if (localWindow === current) localWindow = null; });
   void current.loadFile(join(__dirname, "renderer", "index.html"));
 }
@@ -174,6 +177,7 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
   current.webContents.on("did-finish-load", () => {
     if (current !== remoteWindow || current.isDestroyed()) return;
     current.show(); closeSplash();
+    setConnectionState("online");
     if (keepOfflineUntilReady && localWindow && !localWindow.isDestroyed()) {
       vault.lock();
       localWindow.destroy();
@@ -184,6 +188,7 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
   });
   current.webContents.on("did-fail-load", (_event, code, _description, _validatedURL, isMainFrame) => {
     if (!isMainFrame || current !== remoteWindow || current.isDestroyed()) return;
+    setConnectionState("offline");
     current.destroy();
     if (remoteWindow === current) remoteWindow = null;
     closeSplash();
@@ -204,7 +209,9 @@ async function checkForServerAndReconnect(): Promise<void> {
     if (response.status >= 200 && response.status < 500 && response.url.startsWith(origin) &&
         autoReconnectEnabled && localWindow && !localWindow.isDestroyed() &&
         (!remoteWindow || remoteWindow.isDestroyed())) {
-      setConnectionState("reconnecting");\n      createRemoteWindow(origin, true);
+      setConnectionState("reconnecting");
+      setConnectionState("reconnecting");
+      createRemoteWindow(origin, true);
     }
   } catch {
     // Keep the offline vault available and retry on the next interval.
@@ -230,7 +237,11 @@ function registerIpc(): void {
     createRemoteWindow(serverUrl);
     return { saved: true };
   });
-  ipcMain.handle("connection:status", (event) => {\n    if (!isTrustedLocalSender(event)) throw new Error("IPC_SENDER_REJECTED");\n    return connectionState === "unknown" ? "offline" : connectionState;\n  });\n  ipcMain.handle("vault:status", async (event) => {
+  ipcMain.handle("connection:status", (event) => {
+    if (!isTrustedLocalSender(event)) throw new Error("IPC_SENDER_REJECTED");
+    return connectionState === "unknown" ? "offline" : connectionState;
+  });
+  ipcMain.handle("vault:status", async (event) => {
     if (!isTrustedLocalSender(event)) throw new Error("IPC_SENDER_REJECTED");
     return { exists: await vault.exists(), unlocked: vault.unlocked };
   });
