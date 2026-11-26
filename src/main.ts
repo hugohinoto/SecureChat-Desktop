@@ -35,7 +35,7 @@ function setConnectionState(next: Exclude<ConnectionState, "unknown">): void {
     reconnecting: { title: "SecureChatに再接続中", body: "サーバーへの接続を確認しました。オンライン画面を準備しています。" }
   };
   // The offline workspace displays an in-app toast while focused. Use OS notifications only in the background.
-  if (!BrowserWindow.getFocusedWindow() && Notification.isSupported()) {
+  if ((next === "online" || !BrowserWindow.getFocusedWindow()) && Notification.isSupported()) {
     const message = messages[next];
     new Notification({ title: message.title, body: message.body, silent: true }).show();
   }
@@ -132,7 +132,7 @@ function createLocalWindow(enableAutoReconnect = false): void {
   current.webContents.on("will-navigate", (event, url) => {
     if (!url.startsWith("file://")) event.preventDefault();
   });
-  current.once("ready-to-show", () => { current.show(); closeSplash(); setConnectionState("offline"); });
+  current.webContents.once("did-finish-load", () => {\n    if (connectionState !== "unknown") current.webContents.send("connection:state", connectionState);\n  });\n  current.once("ready-to-show", () => { current.show(); closeSplash(); setConnectionState("offline"); });
   current.on("closed", () => { if (localWindow === current) localWindow = null; });
   void current.loadFile(join(__dirname, "renderer", "index.html"));
 }
