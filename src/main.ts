@@ -426,6 +426,10 @@ function registerIpc(): void {
   });
 }
 async function checkDesktopUpdate(manual: boolean): Promise<void> {
+  if (!app.isPackaged || process.platform !== "win32" || !process.env.PORTABLE_EXECUTABLE_FILE) {
+    if (manual) await dialog.showMessageBox({ type: "info", title: "SecureChat Desktop", message: "自動更新はWindowsポータブル版で利用できます。" });
+    return;
+  }
   if (updateCheckInFlight) return;
   updateCheckInFlight = true;
   try {
