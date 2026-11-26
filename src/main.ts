@@ -116,8 +116,12 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   const request = requestValue as { method?: unknown; body?: unknown; contentType?: unknown };
   const method = typeof request.method === "string" ? request.method.toUpperCase() : "GET";
   if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method)) throw new Error("DESKTOP_API_METHOD_REJECTED");
-  if (request.body !== undefined && request.body !== null &&
-      (typeof request.body !== "string" || Buffer.byteLength(request.body, "utf8") > 16 * 1024 * 1024)) {
+  const requestBody = request.body;
+  const bodyIsText = typeof requestBody === "string";
+  const bodyIsBytes = requestBody instanceof Uint8Array || requestBody instanceof ArrayBuffer;
+  if (requestBody !== undefined && requestBody !== null &&
+      (!bodyIsText && !bodyIsBytes ||
+       (bodyIsText ? Buffer.byteLength(requestBody as string, "utf8") : (requestBody instanceof ArrayBuffer ? requestBody.byteLength : (requestBody as Uint8Array).byteLength)) > 16 * 1024 * 1024)) {
     throw new Error("DESKTOP_API_BODY_REJECTED");
   }
   const origin = validateServerUrl(configuredServerUrl || DEFAULT_SERVER_URL);
@@ -132,9 +136,9 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   if (sessionCookie) headers.set("Cookie", sessionCookie);
   if (request.contentType === "application/json") headers.set("Content-Type", "application/json");
   else if (typeof request.contentType === "string" && request.contentType.length <= 128 &&
-           ["application/octet-stream", "text/plain"].includes(request.contentType)) headers.set("Content-Type", request.contentType);
+           /^(application\\/octet-stream|text\\/plain)(?:;.*)?$/.test(request.contentType)) headers.set("Content-Type", request.contentType);
   const response = await fetch(target, {
-    method, headers, body: request.body == null ? undefined : request.body,
+    method, headers, body: requestBody == null ? undefined : (requestBody instanceof ArrayBuffer ? Buffer.from(requestBody) : requestBody instanceof Uint8Array ? Buffer.from(requestBody) : requestBody as string),
     redirect: "manual", signal: AbortSignal.timeout(120000)
   });
   const responseHeaders = response.headers as Headers & { getSetCookie?: () => string[] };
@@ -150,9 +154,15 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
     }
   }
   if (target.pathname === "/api/auth/logout" && response.ok) await clearStoredSession();
+  const contentType = response.headers.get("content-type") || "application/json";
+  if (contentType.startsWith("application/octet-stream")) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > 16 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
+    return { status: response.status, body: bytes, contentType };
+  }
   const body = await response.text();
   if (Buffer.byteLength(body, "utf8") > 16 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
-  return { status: response.status, body, contentType: response.headers.get("content-type") || "application/json" };
+  return { status: response.status, body, contentType };
 }
 function isTrustedConfigSender(event: Electron.IpcMainInvokeEvent): boolean {
   return !!configWindow && event.sender === configWindow.webContents &&
@@ -222,7 +232,7 @@ function createLocalWindow(enableAutoReconnect = false): void {
   });
   current.once("ready-to-show", () => { current.show(); closeSplash(); setConnectionState("offline"); });
   current.on("closed", () => { if (localWindow === current) localWindow = null; });
-  void current.loadFile(join(__dirname, "renderer", "index.html"));
+  void current.loadFile(join(__dirname, "renderer", "web-client", "offline.html"));
 }
 function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): void {
   const origin = validateServerUrl(serverUrl);
