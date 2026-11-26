@@ -312,15 +312,12 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
   current.webContents.on("did-finish-load", () => {
     if (current !== remoteWindow || current.isDestroyed()) return;
     current.show(); closeSplash();
-    setConnectionState("online");
+    // The renderer is a bundled local file. Its load event does not prove that the API is reachable.
+    setConnectionState("reconnecting");
     void confirmPendingUpdate(app.getPath("userData"));
     autoReconnectEnabled = true;
-    if (keepOfflineUntilReady && localWindow && !localWindow.isDestroyed()) {
-      vault.lock();
-      localWindow.destroy();
-      localWindow = null;
-    }
     if (configWindow && !configWindow.isDestroyed()) configWindow.close();
+    void checkForServerAndReconnect();
   });
   current.webContents.on("did-fail-load", (_event, code, _description, _validatedURL, isMainFrame) => {
     if (!isMainFrame || current !== remoteWindow || current.isDestroyed()) return;
@@ -334,23 +331,42 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
   void current.loadFile(join(__dirname, "renderer", "web-client", "index.html"));
 }
 
+async function isServerReachable(origin: string): Promise<boolean> {
+  try {
+    const response = await net.fetch(origin + "/api/auth/me", {
+      method: "GET",
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+      headers: { Accept: "application/json", "Cache-Control": "no-cache" }
+    });
+    // 2xx–4xx means the server answered. In particular, 401 is a normal unauthenticated response.
+    // Do not inspect Response.url: Electron's net.fetch may expose a normalized/empty URL.
+    return response.status >= 200 && response.status < 500;
+  } catch {
+    return false;
+  }
+}
+
 async function checkForServerAndReconnect(): Promise<void> {
   if (!autoReconnectEnabled || reconnectInFlight) return;
   reconnectInFlight = true;
   try {
     const serverUrl = configuredServerUrl || await readServerConfig() || DEFAULT_SERVER_URL;
     const origin = validateServerUrl(serverUrl);
-    let reachable = false;
-    try {
-      const response = await net.fetch(origin + "/api/auth/me", {
-        method: "GET", redirect: "manual", signal: AbortSignal.timeout(5000),
-        headers: { Accept: "application/json" }
-      });
-      reachable = response.status >= 200 && response.status < 500 && response.url.startsWith(origin);
-    } catch { reachable = false; }
-
+    const reachable = await isServerReachable(origin);
     const onlineWindow = remoteWindow && !remoteWindow.isDestroyed() ? remoteWindow : null;
     const offlineWindow = localWindow && !localWindow.isDestroyed() ? localWindow : null;
+
+    if (onlineWindow && reachable) {
+      setConnectionState("online");
+      if (offlineWindow) {
+        vault.lock();
+        offlineWindow.destroy();
+        if (localWindow === offlineWindow) localWindow = null;
+      }
+      return;
+    }
+
     if (onlineWindow && !reachable) {
       setConnectionState("offline");
       onlineWindow.destroy();
@@ -358,9 +374,23 @@ async function checkForServerAndReconnect(): Promise<void> {
       if (!offlineWindow) createLocalWindow(true);
       return;
     }
+
     if (offlineWindow && reachable && (!remoteWindow || remoteWindow.isDestroyed())) {
       setConnectionState("reconnecting");
       createRemoteWindow(origin, true);
+    } else if (offlineWindow && !reachable) {
+      setConnectionState("offline");
+    }
+  } catch {
+    const onlineWindow = remoteWindow && !remoteWindow.isDestroyed() ? remoteWindow : null;
+    const offlineWindow = localWindow && !localWindow.isDestroyed() ? localWindow : null;
+    if (onlineWindow) {
+      setConnectionState("offline");
+      onlineWindow.destroy();
+      if (remoteWindow === onlineWindow) remoteWindow = null;
+      if (!offlineWindow) createLocalWindow(true);
+    } else if (offlineWindow) {
+      setConnectionState("offline");
     }
   } finally {
     reconnectInFlight = false;
@@ -498,11 +528,7 @@ app.whenReady().then(async () => {
     const envUrl = process.env.SECURECHAT_SERVER_URL;
     const savedUrl = envUrl ? validateServerUrl(envUrl) : (await readServerConfig()) || DEFAULT_SERVER_URL;
     configuredServerUrl = savedUrl;
-    const probe = await net.fetch(savedUrl + "/api/auth/me", {
-      method: "GET", redirect: "manual", signal: AbortSignal.timeout(5000),
-      headers: { Accept: "application/json" }
-    });
-    if (probe.status >= 200 && probe.status < 500 && probe.url.startsWith(savedUrl)) createRemoteWindow(savedUrl);
+    if (await isServerReachable(savedUrl)) createRemoteWindow(savedUrl);
     else { closeSplash(); createLocalWindow(true); }
 
   } catch {
