@@ -18,7 +18,7 @@ test("online web client API traffic is bridged through the main process", async 
   assert.match(bootstrap, /secureChatDesktop\.request/);
   assert.match(bootstrap, /body instanceof Blob/);
   assert.match(main, /ipcMain\.handle\("api:request"/);
-  assert.match(main, /const response = await net\.fetch\(target,/);
+  assert.match(main, /const response = await net\.fetch\(target\.toString\(\),/);
   assert.match(main, /pathValue\.startsWith\("\/api\/"\)/);
   assert.match(main, /target\.origin !== origin/);
   assert.match(main, /Origin: origin/);
