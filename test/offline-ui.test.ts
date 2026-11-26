@@ -35,7 +35,7 @@ test("offline fallback retries the configured server and preserves the vault unt
   const main = await readFile("src/main.ts", "utf8");
   assert.match(main, /function startAutoReconnectMonitor/);
   assert.match(main, /setInterval\(\(\) => \{ void checkForServerAndReconnect\(\); \}, 15000\)/);
-  assert.match(main, /AbortSignal\.timeout\(5000\)/);
+  assert.match(main, /AbortSignal\.timeout\(8000\)/);
   assert.match(main, /createRemoteWindow\(origin, true\)/);
   assert.match(main, /if \(keepOfflineUntilReady && localWindow/);
   assert.match(main, /vault\.lock\(\);\s+localWindow\.destroy\(\)/);
