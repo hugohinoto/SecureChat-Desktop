@@ -91,8 +91,8 @@ function createLocalWindow(): void {
   if (localWindow && !localWindow.isDestroyed()) { localWindow.show(); localWindow.focus(); return; }
   if (remoteWindow && !remoteWindow.isDestroyed()) { remoteWindow.destroy(); remoteWindow = null; }
   localWindow = new BrowserWindow({
-    width: 1120, height: 780, minWidth: 680, minHeight: 520,
-    title: "SecureChat Desktop — オフライン保管庫",
+    width: 1280, height: 850, minWidth: 760, minHeight: 600,
+    title: "SecureChat Desktop",
     icon: join(__dirname, "renderer", "assets", "securechat-icon.svg"),
     backgroundColor: "#10151d", show: false,
     webPreferences: {
