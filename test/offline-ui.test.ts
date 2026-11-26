@@ -29,3 +29,15 @@ test("offline UI keeps the vault gate and renderer controls wired", async () => 
     assert.ok(js.includes(`"${id}"`), `renderer does not reference element: ${id}`);
   }
 });
+
+
+test("offline fallback retries the configured server and preserves the vault until online load succeeds", async () => {
+  const main = await readFile("src/main.ts", "utf8");
+  assert.match(main, /function startAutoReconnectMonitor/);
+  assert.match(main, /setInterval\(\(\) => \{ void checkForServerAndReconnect\(\); \}, 15000\)/);
+  assert.match(main, /AbortSignal\.timeout\(5000\)/);
+  assert.match(main, /createRemoteWindow\(origin, true\)/);
+  assert.match(main, /if \(keepOfflineUntilReady && localWindow/);
+  assert.match(main, /vault\.lock\(\);\s+localWindow\.destroy\(\)/);
+  assert.match(main, /createLocalWindow\(true\)/);
+});
