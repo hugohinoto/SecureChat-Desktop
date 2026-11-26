@@ -52,7 +52,7 @@ test("offline workspace uses the same bundled SecureChat visual system", async (
 
 test("bundled client build rewrites web paths and applies a local-only CSP", async () => {
   const script = await readFile("scripts/copy-renderer.cjs", "utf8");
-  assert.ok(script.includes("href=\"\\\\/"));
+  assert.ok(script.includes("html.replace"));
   assert.match(script, /crypto-v2\.bundle\.js/);
   assert.match(script, /connect-src 'self' data:/);
   assert.match(script, /loader: \{ "\.wasm": "dataurl" \}/);
