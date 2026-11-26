@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, net, session, shell } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, net, Notification, session, shell } from "electron";
 import { join } from "node:path";
 import { mkdir, readFile, rename, writeFile, rm } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
@@ -17,7 +17,29 @@ let vault: VaultStore;
 let autoReconnectEnabled = false;
 let reconnectInFlight = false;
 let reconnectTimer: NodeJS.Timeout | null = null;
+type ConnectionState = "unknown" | "online" | "offline" | "reconnecting";
+let connectionState: ConnectionState = "unknown";
 
+function setConnectionState(next: Exclude<ConnectionState, "unknown">): void {
+  if (connectionState === next) return;
+  const previous = connectionState;
+  connectionState = next;
+  if (localWindow && !localWindow.isDestroyed()) {
+    localWindow.webContents.send("connection:state", next);
+  }
+  // Do not announce the initial state; only meaningful transitions produce notifications.
+  if (previous === "unknown") return;
+  const messages: Record<Exclude<ConnectionState, "unknown">, { title: string; body: string }> = {
+    online: { title: "SecureChatに再接続しました", body: "オンライン画面に戻りました。" },
+    offline: { title: "オフラインに切り替わりました", body: "ローカル保管庫で作業を続けられます。ローカルメッセージは送信されません。" },
+    reconnecting: { title: "SecureChatに再接続中", body: "サーバーへの接続を確認しました。オンライン画面を準備しています。" }
+  };
+  // The offline workspace displays an in-app toast while focused. Use OS notifications only in the background.
+  if (!BrowserWindow.getFocusedWindow() && Notification.isSupported()) {
+    const message = messages[next];
+    new Notification({ title: message.title, body: message.body, silent: true }).show();
+  }
+}
 function configurePortableProfile(): void {
   const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
   if (portableDir) app.setPath("userData", join(portableDir, "portable-data"));
@@ -110,7 +132,7 @@ function createLocalWindow(enableAutoReconnect = false): void {
   current.webContents.on("will-navigate", (event, url) => {
     if (!url.startsWith("file://")) event.preventDefault();
   });
-  current.once("ready-to-show", () => { current.show(); closeSplash(); });
+  current.once("ready-to-show", () => { current.show(); closeSplash(); setConnectionState("offline"); });
   current.on("closed", () => { if (localWindow === current) localWindow = null; });
   void current.loadFile(join(__dirname, "renderer", "index.html"));
 }
@@ -182,7 +204,7 @@ async function checkForServerAndReconnect(): Promise<void> {
     if (response.status >= 200 && response.status < 500 && response.url.startsWith(origin) &&
         autoReconnectEnabled && localWindow && !localWindow.isDestroyed() &&
         (!remoteWindow || remoteWindow.isDestroyed())) {
-      createRemoteWindow(origin, true);
+      setConnectionState("reconnecting");\n      createRemoteWindow(origin, true);
     }
   } catch {
     // Keep the offline vault available and retry on the next interval.
@@ -208,7 +230,7 @@ function registerIpc(): void {
     createRemoteWindow(serverUrl);
     return { saved: true };
   });
-  ipcMain.handle("vault:status", async (event) => {
+  ipcMain.handle("connection:status", (event) => {\n    if (!isTrustedLocalSender(event)) throw new Error("IPC_SENDER_REJECTED");\n    return connectionState === "unknown" ? "offline" : connectionState;\n  });\n  ipcMain.handle("vault:status", async (event) => {
     if (!isTrustedLocalSender(event)) throw new Error("IPC_SENDER_REJECTED");
     return { exists: await vault.exists(), unlocked: vault.unlocked };
   });
