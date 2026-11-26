@@ -1,5 +1,19 @@
 (() => {
  const $=id=>document.getElementById(id);let snapshot=null,selectedId=null,creating=false;
+ function updateConnection(state,announce=false){
+  const pill=$("connection-pill"),label=$("connection-label"),toast=$("connection-toast");
+  const labels={online:"オンライン",offline:"オフライン",reconnecting:"再接続中"};
+  pill.dataset.state=state;label.textContent=labels[state]||"接続状態を確認中";
+  if(!announce)return;
+  const messages={
+   online:"SecureChatへの接続が復旧しました。オンライン画面へ切り替えます。",
+   offline:"接続が切れました。ローカル保管庫で作業できます。メッセージは送信されません。",
+   reconnecting:"サーバーへの接続を確認しました。オンライン画面を準備しています。"
+  };
+  toast.textContent=messages[state]||"";toast.hidden=false;toast.dataset.state=state;
+  clearTimeout(window.__secureChatToastTimer);
+  window.__secureChatToastTimer=setTimeout(()=>{toast.hidden=true;},state==="offline"?6500:4200);
+ }
  function showGate(exists){$("gate").hidden=false;$("workspace").hidden=true;creating=!exists;$("gate-title").textContent=exists?"保管庫をロック解除":"ローカル保管庫を作成";$("gate-description").textContent=exists?"設定したマスターパスワードを入力してください。":"マスターパスワードから暗号鍵を導出して保存します。";$("gate-submit").textContent=exists?"ロック解除":"保管庫を作成";$("password").value="";$("password").autocomplete=exists?"current-password":"new-password";$("confirm-password-row").hidden=exists;$("confirm-password").disabled=exists;$("confirm-password").value="";$("gate-error").textContent="";}
  function render(){const list=$("conversation-list");list.replaceChildren();for(const c of snapshot.conversations){const b=document.createElement("button");b.className="conversation"+(c.id===selectedId?" active":"");const name=document.createElement("span");name.textContent=c.title;const count=document.createElement("small");count.textContent=String(c.messages.length);b.append(name,count);b.addEventListener("click",()=>{selectedId=c.id;render();});list.append(b);}
  const selected=snapshot.conversations.find(c=>c.id===selectedId);$("chat-title").textContent=selected?selected.title:"チャットを選択";const area=$("messages");area.replaceChildren();
@@ -11,4 +25,6 @@
  $("composer").addEventListener("submit",async e=>{e.preventDefault();if(!selectedId)return;const input=$("message-input"),text=input.value.trim();if(!text)return;$("send").disabled=true;try{await window.secureChat.addLocalMessage(selectedId,text);snapshot=await window.secureChat.getSnapshot();input.value="";render();}catch{window.alert("メッセージをローカル保存できませんでした。");}finally{$("send").disabled=false;}});
  $("lock").addEventListener("click",async()=>{await window.secureChat.lock();snapshot=null;selectedId=null;showGate(true);});
  window.secureChat.getVaultStatus().then(s=>showGate(s.exists)).catch(()=>showGate(false));
+ window.secureChat.getConnectionState().then(state=>updateConnection(state,false)).catch(()=>updateConnection("offline",false));
+ window.secureChat.onConnectionState(state=>updateConnection(state,true));
 })();
