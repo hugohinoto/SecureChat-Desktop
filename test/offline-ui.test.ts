@@ -31,14 +31,16 @@ test("offline UI keeps the vault gate and renderer controls wired", async () => 
 });
 
 
-test("offline fallback retries the configured server and preserves the vault until online load succeeds", async () => {
+test("offline fallback retries the server and preserves the vault until API reachability is confirmed", async () => {
   const main = await readFile("src/main.ts", "utf8");
+  const remoteWindow = main.slice(main.indexOf("function createRemoteWindow"), main.indexOf("async function isServerReachable"));
+  const reconnect = main.slice(main.indexOf("async function checkForServerAndReconnect"), main.indexOf("function startAutoReconnectMonitor"));
   assert.match(main, /function startAutoReconnectMonitor/);
   assert.match(main, /setInterval\(\(\) => \{ void checkForServerAndReconnect\(\); \}, 15000\)/);
   assert.match(main, /AbortSignal\.timeout\(8000\)/);
-  assert.match(main, /createRemoteWindow\(origin, true\)/);
-  assert.match(main, /if \(keepOfflineUntilReady && localWindow/);
-  assert.match(main, /vault\.lock\(\);\s+localWindow\.destroy\(\)/);
+  assert.match(reconnect, /createRemoteWindow\(origin, true\)/);
+  assert.doesNotMatch(remoteWindow, /localWindow\.destroy\(\)/);
+  assert.match(reconnect, /if \(onlineWindow && reachable\)[\s\S]*if \(offlineWindow\)[\s\S]*vault\.lock\(\);\s+offlineWindow\.destroy\(\)/);
   assert.match(main, /createLocalWindow\(true\)/);
 });
 
