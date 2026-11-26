@@ -136,7 +136,7 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   if (sessionCookie) headers.set("Cookie", sessionCookie);
   if (request.contentType === "application/json") headers.set("Content-Type", "application/json");
   else if (typeof request.contentType === "string" && request.contentType.length <= 128 &&
-           /^(application\\/octet-stream|text\\/plain)(?:;.*)?$/.test(request.contentType)) headers.set("Content-Type", request.contentType);
+           (request.contentType.startsWith("application/octet-stream") || request.contentType.startsWith("text/plain"))) headers.set("Content-Type", request.contentType);
   const response = await fetch(target, {
     method, headers, body: requestBody == null ? undefined : (requestBody instanceof ArrayBuffer ? Buffer.from(requestBody) : requestBody instanceof Uint8Array ? Buffer.from(requestBody) : requestBody as string),
     redirect: "manual", signal: AbortSignal.timeout(120000)
