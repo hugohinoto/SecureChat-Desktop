@@ -2,7 +2,7 @@ name: Publish Desktop Release
 
 on:
   push:
-    tags:
+    branches:
       - "v*"
 
 permissions:
