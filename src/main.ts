@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, session, shell } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, net, session, shell } from "electron";
 import { join } from "node:path";
 import { mkdir, readFile, rename, writeFile, rm } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
@@ -14,6 +14,9 @@ let splashWindow: BrowserWindow | null = null;
 let configuredServerUrl: string | null = null;
 let configPath = "";
 let vault: VaultStore;
+let autoReconnectEnabled = false;
+let reconnectInFlight = false;
+let reconnectTimer: NodeJS.Timeout | null = null;
 
 function configurePortableProfile(): void {
   const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
@@ -87,7 +90,8 @@ function createConfigWindow(message = ""): void {
   void configWindow.loadFile(join(__dirname, "renderer", "config.html"));
   if (message) configWindow.webContents.once("did-finish-load", () => configWindow?.webContents.send("config:error", message));
 }
-function createLocalWindow(): void {
+function createLocalWindow(enableAutoReconnect = false): void {
+  autoReconnectEnabled = enableAutoReconnect;
   if (localWindow && !localWindow.isDestroyed()) { localWindow.show(); localWindow.focus(); return; }
   if (remoteWindow && !remoteWindow.isDestroyed()) { remoteWindow.destroy(); remoteWindow = null; }
   localWindow = new BrowserWindow({
@@ -110,10 +114,13 @@ function createLocalWindow(): void {
   current.on("closed", () => { if (localWindow === current) localWindow = null; });
   void current.loadFile(join(__dirname, "renderer", "index.html"));
 }
-function createRemoteWindow(serverUrl: string): void {
+function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): void {
   const origin = validateServerUrl(serverUrl);
   configuredServerUrl = origin;
-  if (localWindow && !localWindow.isDestroyed()) { localWindow.destroy(); localWindow = null; }
+  if (!keepOfflineUntilReady) {
+    autoReconnectEnabled = false;
+    if (localWindow && !localWindow.isDestroyed()) { vault.lock(); localWindow.destroy(); localWindow = null; }
+  }
   if (remoteWindow && !remoteWindow.isDestroyed()) { remoteWindow.destroy(); remoteWindow = null; }
   remoteWindow = new BrowserWindow({
     width: 1280, height: 850, minWidth: 760, minHeight: 600,
@@ -145,6 +152,12 @@ function createRemoteWindow(serverUrl: string): void {
   current.webContents.on("did-finish-load", () => {
     if (current !== remoteWindow || current.isDestroyed()) return;
     current.show(); closeSplash();
+    if (keepOfflineUntilReady && localWindow && !localWindow.isDestroyed()) {
+      vault.lock();
+      localWindow.destroy();
+      localWindow = null;
+    }
+    autoReconnectEnabled = false;
     if (configWindow && !configWindow.isDestroyed()) configWindow.close();
   });
   current.webContents.on("did-fail-load", (_event, code, _description, _validatedURL, isMainFrame) => {
@@ -152,7 +165,7 @@ function createRemoteWindow(serverUrl: string): void {
     current.destroy();
     if (remoteWindow === current) remoteWindow = null;
     closeSplash();
-    createLocalWindow();
+    if (!localWindow || localWindow.isDestroyed()) createLocalWindow(true);
   });
   current.on("closed", () => { if (remoteWindow === current) remoteWindow = null; });
   void current.loadURL(origin);
@@ -203,7 +216,7 @@ function installApplicationMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     { label: "SecureChat", submenu: [
       { label: "オンラインに接続", click: () => { if (configuredServerUrl) createRemoteWindow(configuredServerUrl); else void readServerConfig().then(url => createRemoteWindow(url || DEFAULT_SERVER_URL)); } },
-      { label: "オフライン保管庫を開く", click: () => createLocalWindow() },
+      { label: "オフライン保管庫を開く", click: () => createLocalWindow(false) },
       { label: "サーバー接続先を変更…", click: () => createConfigWindow() },
       { label: "再接続", click: () => { if (configuredServerUrl) createRemoteWindow(configuredServerUrl); } },
       { type: "separator" }, { role: "quit", label: "終了" }
@@ -228,8 +241,9 @@ app.whenReady().then(async () => {
     const savedUrl = envUrl ? validateServerUrl(envUrl) : (await readServerConfig()) || DEFAULT_SERVER_URL;
     createRemoteWindow(savedUrl);
   } catch {
-    closeSplash(); createLocalWindow();
+    closeSplash(); createLocalWindow(true);
   }
+  startAutoReconnectMonitor();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       if (configuredServerUrl) createRemoteWindow(configuredServerUrl);
