@@ -265,6 +265,7 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
     icon: join(__dirname, "renderer", "assets", "securechat-icon.svg"),
     backgroundColor: "#10151d", show: false,
     webPreferences: {
+      preload: join(__dirname, "web-preload.js"),
       contextIsolation: true, nodeIntegration: false, sandbox: true,
       webSecurity: true, allowRunningInsecureContent: false,
       webviewTag: false, devTools: !app.isPackaged
