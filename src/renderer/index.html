@@ -4,22 +4,41 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SecureChat Desktop</title>
+<meta name="theme-color" content="#080e19">
+<title>SecureChat — Desktop</title>
 <link rel="icon" type="image/svg+xml" href="assets/securechat-icon.svg">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<main class="shell">
-<header class="topbar">
-<div class="brand"><img class="brand-icon" src="assets/securechat-icon.svg" alt=""><div><strong>SecureChat</strong><small>DESKTOP · OFFLINE FIRST</small></div></div>
-<span class="status">オフライン動作</span>
-</header>
-<section id="gate" class="gate"><div class="gate-card"><div class="eyebrow">LOCAL ENCRYPTED VAULT</div><h1 id="gate-title">ローカル保管庫</h1><p id="gate-description">マスターパスワードで暗号化データを保護します。</p><form id="gate-form"><label for="password">マスターパスワード</label><input id="password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required><div id="confirm-password-row"><label for="confirm-password">マスターパスワード（確認）</label><input id="confirm-password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required></div><p class="hint">12文字以上。忘れるとデータを復旧できません。</p><button id="gate-submit" type="submit">保管庫を作成</button></form><p id="gate-error" class="error" role="alert"></p></div></section>
-<section id="workspace" class="workspace" hidden>
-<aside class="sidebar"><div class="side-heading"><span>チャット</span><button id="new-chat" class="icon-button" aria-label="新しいチャット">＋</button></div><div id="conversation-list" class="conversation-list"></div><div class="side-bottom"><div class="vault-indicator">● 暗号化保管庫は解除中</div><button id="lock" class="secondary">ロックする</button></div></aside>
-<section class="chat-panel"><div class="chat-heading"><div><div id="chat-title" class="chat-title">チャットを選択</div><div class="subheading">端末内に保存 · サーバー未接続</div></div><span class="local-tag">LOCAL</span></div><div id="messages" class="messages"><div class="empty-state"><h2>オフラインでも使える</h2><p>チャットを作成してローカルに保存できます。</p></div></div><form id="composer" class="composer"><textarea id="message-input" rows="1" placeholder="メッセージを入力…" maxlength="100000" disabled></textarea><button id="send" type="submit" disabled>送信キューへ</button></form><div class="delivery-note">暗号化して端末に保存します。現在、相手には送信されません。</div></section>
+<div class="ambient ambient-one" aria-hidden="true"></div><div class="ambient ambient-two" aria-hidden="true"></div>
+<main id="workspace" class="app-shell" hidden>
+<aside class="sidebar glass-panel" aria-label="チャットメニュー">
+  <div class="brand"><div class="brand-mark"><img src="assets/securechat-icon.svg" alt=""></div><div><div class="brand-name">SecureChat</div><div class="brand-caption">PRIVATE MESSAGING · DESKTOP</div></div></div>
+  <div class="sidebar-section-label">WORKSPACE</div>
+  <div class="workspace-card"><div class="workspace-icon">S</div><div class="workspace-copy"><strong>SecureChat Lab</strong><span>デスクトップワークスペース</span></div><span class="workspace-dot"></span></div>
+  <nav class="workspace-navigation" aria-label="ワークスペース"><span class="workspace-nav-link active"><span>▣</span><span>チャット</span></span><span class="workspace-nav-link disabled"><span>⇧</span><span>SecureDrop（オンラインのみ）</span></span></nav>
+  <div class="sidebar-heading"><span>ローカルチャット</span><button id="new-chat" class="icon-button" type="button" aria-label="新しいチャット">＋</button></div>
+  <div id="conversation-list" class="conversation-list"><p class="sidebar-empty">チャットはまだありません。</p></div>
+  <div class="sidebar-note"><span class="note-icon">ⓘ</span><p>通信障害でオフラインになった場合は、SecureChatサーバーへの接続を15秒ごとに確認し、復旧後に自動でオンライン画面へ切り替えます。ここで作成したメッセージは相手に送信されず、オンラインの会話とも同期されません。</p></div>
+  <div class="sidebar-spacer"></div>
+  <div class="profile-card"><div class="profile-avatar">S</div><div class="profile-copy"><strong>ローカル保管庫</strong><span>マスターパスワードで保護</span></div></div>
+  <button id="lock" class="secondary">保管庫をロック</button>
+</aside>
+<section class="chat-panel glass-panel" aria-label="チャット">
+  <header class="chat-header"><div class="room-title-wrap"><div class="room-title-avatar">#</div><div><h1 id="chat-title">個別チャットを選択</h1><p id="chat-subtitle">ローカル保管庫の会話</p></div></div><div class="header-actions"><div class="connection-pill" id="connection-pill" data-state="disconnected"><span class="connection-dot"></span><span id="connection-label">オフライン</span></div><div class="prototype-pill">LOCAL VAULT</div></div></header>
+  <section class="security-banner" aria-label="保存状態"><div class="security-symbol">⌑</div><div class="security-copy"><strong>端末内の暗号化保管庫</strong><span>メッセージはマスターパスワードから導出した鍵で暗号化して保存されます。オンラインのE2EE会話とは別のデータです。</span></div><span class="banner-tag">ローカル保存</span></section>
+  <div class="timeline" id="messages" aria-live="polite"><div class="day-divider"><span>SECURECHAT DESKTOP</span></div><div class="welcome-card"><div class="welcome-orb">＋</div><h2>会話のための、静かな場所。</h2><p>ローカルチャットを作成してメッセージを保存できます。オフライン中のメッセージは相手には届きません。</p><div class="welcome-meta"><span class="welcome-line"></span><span>ここから会話を始めましょう</span><span class="welcome-line"></span></div></div></div>
+  <footer class="composer-area"><div class="composer-hint"><span class="hint-dot"></span><span id="composer-hint">ローカルチャットを選択すると入力できます</span></div><form id="composer" class="composer"><textarea id="message-input" rows="1" maxlength="100000" placeholder="メッセージを入力…" disabled></textarea><div class="composer-bottom"><span class="composer-shortcut">端末内に暗号化して保存 · 相手には送信されません</span><div class="composer-actions"><button id="send" class="send-button" type="submit" disabled><span>ローカル保存</span><span aria-hidden="true">↗</span></button></div></div></form><div class="footer-caption">SecureChat Desktop <span>·</span> オフラインモード <span>·</span> メッセージは端末内に保存されます</div></footer>
 </section>
 </main>
+<section id="gate" class="auth-gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+  <div class="auth-card glass-panel"><div class="auth-brand-mark"><img src="assets/securechat-icon.svg" alt=""></div><div class="auth-eyebrow">LOCAL ENCRYPTED VAULT</div><h2 id="gate-title">ローカル保管庫</h2><p id="gate-description" class="auth-description">マスターパスワードで暗号化データを保護します。</p>
+    <form id="gate-form" novalidate><label class="auth-label" for="password">マスターパスワード</label><input class="auth-input" id="password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required>
+    <div id="confirm-password-row"><label class="auth-label" for="confirm-password">マスターパスワード（確認）</label><input class="auth-input" id="confirm-password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required></div>
+    <div class="auth-field-hint">12文字以上。忘れるとローカルデータを復旧できません。</div><p id="gate-error" class="auth-error" role="alert"></p><button id="gate-submit" class="auth-submit" type="submit">保管庫を作成</button></form>
+    <div class="auth-security-note"><p>オンラインアカウントとは別の保管庫です。オンラインのチャット履歴・暗号鍵はここには表示されません。</p></div>
+  </div>
+</section>
 <script src="app.js"></script>
 </body>
 </html>
