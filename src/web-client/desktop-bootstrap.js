@@ -10,8 +10,11 @@
       if (!target.pathname.startsWith("/api/")) return nativeFetch(input, init);
 
       const method = String(init.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
-      const body = init.body ?? null;
-      if (body !== null && typeof body !== "string") {
+      let body = init.body ?? null;
+      if (body instanceof Blob) body = new Uint8Array(await body.arrayBuffer());
+      else if (body instanceof ArrayBuffer) body = new Uint8Array(body);
+      else if (input instanceof Request && body === null && method !== "GET" && method !== "HEAD") body = new Uint8Array(await input.clone().arrayBuffer());
+      if (body !== null && typeof body !== "string" && !(body instanceof Uint8Array)) {
         return new Response(JSON.stringify({ error: "DESKTOP_BODY_UNSUPPORTED" }), {
           status: 415, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
         });
