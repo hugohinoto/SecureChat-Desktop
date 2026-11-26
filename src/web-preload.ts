@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-type ApiRequest = { method?: string; body?: string | null; contentType?: string };
-type ApiResponse = { status: number; body: string; contentType: string };
+type ApiRequest = { method?: string; body?: string | Uint8Array | null; contentType?: string };
+type ApiResponse = { status: number; body: string | Uint8Array; contentType: string };
 
 contextBridge.exposeInMainWorld("secureChatDesktop", {
   request: (path: string, request: ApiRequest): Promise<ApiResponse> =>
