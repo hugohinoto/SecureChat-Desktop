@@ -33,7 +33,7 @@ test("offline UI keeps the vault gate and renderer controls wired", async () => 
 
 test("offline fallback retries the server and preserves the vault until API reachability is confirmed", async () => {
   const main = await readFile("src/main.ts", "utf8");
-  const remoteWindow = main.slice(main.indexOf("function createRemoteWindow"), main.indexOf("async function isServerReachable"));
+  const remoteWindowLoad = main.slice(main.indexOf('current.webContents.on("did-finish-load"'), main.indexOf('current.webContents.on("did-fail-load"'));
   const reconnect = main.slice(main.indexOf("async function checkForServerAndReconnect"), main.indexOf("function startAutoReconnectMonitor"));
   assert.match(main, /function startAutoReconnectMonitor/);
   assert.match(main, /setInterval\(\(\) => \{ void checkForServerAndReconnect\(\); \}, 15000\)/);
