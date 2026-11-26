@@ -22,6 +22,7 @@ test("online web client API traffic is bridged through the main process", async 
   assert.match(main, /pathValue\.startsWith\("\/api\/"\)/);
   assert.match(main, /target\.origin !== origin/);
   assert.match(main, /Origin: origin/);
+  assert.match(main, /headers: Object\.fromEntries\(headers\.entries\(\)\)/);
   assert.match(main, /safeStorage\.encryptString/);
   assert.match(main, /isWithinBundledDirectory/);
   assert.match(main, /isExactBundledFile/);
