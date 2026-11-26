@@ -179,7 +179,9 @@ async function checkForServerAndReconnect(): Promise<void> {
     const origin = validateServerUrl(serverUrl);
     // A response from the configured HTTPS origin confirms reachability; failed probes leave the local vault untouched.
     const response = await net.fetch(origin, { method: "HEAD", redirect: "manual", signal: AbortSignal.timeout(5000) });
-    if (response.status >= 200 && response.status < 500 && response.url.startsWith(origin)) {
+    if (response.status >= 200 && response.status < 500 && response.url.startsWith(origin) &&
+        autoReconnectEnabled && localWindow && !localWindow.isDestroyed() &&
+        (!remoteWindow || remoteWindow.isDestroyed())) {
       createRemoteWindow(origin, true);
     }
   } catch {
