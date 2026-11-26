@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { dirname, extname, isAbsolute, join, resolve, sep } from "node:path";
+import { extname, isAbsolute, join, relative, resolve } from "node:path";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 const REPOSITORY = "hugohinoto/SecureChat-Desktop";
@@ -61,13 +61,13 @@ export async function confirmPendingUpdate(userDataPath: string): Promise<void> 
   try {
     const pending = JSON.parse(await readFile(pendingPath, "utf8")) as { version?: unknown; markerPath?: unknown };
     if (typeof pending.version !== "string" || typeof pending.markerPath !== "string") return;
-    const root = resolve(userDataPath), marker = resolve(pending.markerPath), relative = marker.slice(root.length);
-    if (!relative || relative.startsWith(sep) && relative.slice(1).startsWith("..") || !marker.startsWith(root + sep)) return;
+    const root = resolve(userDataPath), marker = resolve(pending.markerPath), markerRelative = relative(root, marker);
+    if (!markerRelative || markerRelative.startsWith("..") || isAbsolute(markerRelative)) return;
     await writeFile(marker, pending.version, { encoding: "utf8", mode: 0o600 });
   } catch { /* No pending update is the normal startup path. */ }
 }
 
-export async function downloadAndStageUpdate(update: AvailableUpdate, userDataPath: string): Promise<{ helperPath: string }> {
+export async function downloadAndStageUpdate(update: AvailableUpdate, userDataPath: string): Promise<void> {
   if (process.platform !== "win32" || !process.env.PORTABLE_EXECUTABLE_FILE) throw new Error("PORTABLE_UPDATE_NOT_SUPPORTED");
   const executable = resolve(process.env.PORTABLE_EXECUTABLE_FILE);
   if (!isAbsolute(executable) || extname(executable).toLowerCase() !== ".exe") throw new Error("PORTABLE_EXECUTABLE_PATH_INVALID");
@@ -81,13 +81,10 @@ export async function downloadAndStageUpdate(update: AvailableUpdate, userDataPa
   if (digest !== update.sha256) throw new Error("UPDATE_INTEGRITY_CHECK_FAILED");
 
   const staged = executable + ".securechat-update.exe";
-  const backup = executable + ".securechat-rollback.exe";
-  const marker = join(userDataPath, `update-healthy-${update.version}.flag`);
-  const pending = join(userDataPath, "pending-update.json");
   await mkdir(userDataPath, { recursive: true });
   await rm(staged, { force: true });
   await writeFile(staged, bytes, { flag: "wx", mode: 0o700 });
-  return { helperPath: staged };
+
 }
 
 export async function launchStagedUpdate(version: string, userDataPath: string): Promise<void> {
