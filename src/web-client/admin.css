@@ -1,0 +1,142 @@
+:root{color-scheme:dark;font-family:Inter,"Segoe UI","Noto Sans JP",Meiryo,sans-serif;background:#0b111b;color:#dce6f4;font-synthesis:none;text-rendering:optimizeLegibility}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background:#0b111b}button,input,textarea,select{font:inherit}button{cursor:pointer}a{color:inherit}
+.topbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#111a27;border-bottom:1px solid #263448;position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-size:12px;font-weight:750;letter-spacing:.2px}.brand-mark{display:grid;place-items:center;width:24px;height:24px;border-radius:6px;background:#23658a;color:#e7f7ff;font-weight:900}.brand-divider{color:#53647d}.brand-context{color:#9aabc3;font-weight:500}
+.top-actions{display:flex;align-items:center;gap:13px;color:#9cacc3;font-size:10px}.top-actions a{color:#a9cce1;text-decoration:none}.top-actions a:hover{color:#fff}.top-actions button,.secondary,.search-row button{border:1px solid #35465d;border-radius:5px;padding:7px 10px;color:#d6e2f2;background:#1a293a;font-size:10px}.top-actions button:hover,.secondary:hover,.search-row button:hover{background:#263b52}.connection-state{color:#83cdb2;font-size:9px;letter-spacing:.8px}.connection-state i,.secure-pill i,.explorer-status i,.status-bar i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#55c79c;margin-right:6px}
+.app-shell{width:100%;padding:20px 22px 40px}.intro{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:0 auto 14px;max-width:1600px}.eyebrow{margin:0 0 7px;color:#75b9d7;font-size:9px;font-weight:800;letter-spacing:1.5px}.intro h1{margin:0;font-size:23px;letter-spacing:-.5px}.intro p:not(.eyebrow){margin:7px 0 0;color:#8495ad;font-size:11px}.secure-pill{padding:8px 10px;border:1px solid #294b4b;border-radius:20px;color:#a0d9c7;font-size:9px;letter-spacing:.6px;white-space:nowrap}
+.notice{max-width:1600px;margin:0 auto 12px;padding:11px 14px;border:1px solid #705535;border-radius:6px;background:#302719;color:#f0c58d;font-size:11px;line-height:1.6}.notice.error{border-color:#743d4c;background:#321c25;color:#ffb5c0}.notice.ok{border-color:#28584d;background:#142b28;color:#a7e6d3}
+.admin-workspace{display:grid;grid-template-columns:44px 224px minmax(0,1fr);max-width:1600px;min-height:calc(100vh - 150px);margin:0 auto;border:1px solid #263448;border-radius:7px;overflow:hidden;background:#0e1724}
+.activity-bar{display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 0;background:#101a28;border-right:1px solid #263448}.activity-icon{display:grid;place-items:center;width:34px;height:38px;border-left:2px solid transparent;color:#8192aa;text-decoration:none;font-size:17px}.activity-icon:hover{color:#e5f1ff;background:#1b2a3b}.activity-icon.active{border-left-color:#65b9dc;color:#e5f5ff}.activity-bottom{margin-top:auto}
+.explorer{display:flex;flex-direction:column;min-width:0;background:#131e2d;border-right:1px solid #263448}.explorer-heading{height:39px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;color:#aab8cb;font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase}.explorer-more{color:#72839b;letter-spacing:2px}.tree-root{display:flex;align-items:center;gap:8px;padding:9px 12px;color:#c2cede;font-size:10px;font-weight:750;letter-spacing:.5px}.tree-chevron{color:#8294ae}.tree-folder{color:#d2b56f}.tree-group{padding:2px 8px 12px}.tree-item{display:flex;align-items:center;gap:9px;min-height:31px;padding:6px 9px;border-radius:4px;color:#aab8ca;text-decoration:none;font-size:10px}.tree-item:hover{background:#1c2b3e;color:#edf5ff}.tree-item.active{background:#20364c;color:#e8f5ff}.tree-symbol{width:15px;text-align:center;font-size:12px}.tree-symbol.blue{color:#78b9e4}.tree-symbol.cyan{color:#6fc7d0}.tree-symbol.yellow{color:#d9bd73}.tree-symbol.orange{color:#d99c70}.tree-symbol.green{color:#79c6a1}.tree-symbol.purple{color:#b2a0df}.muted-symbol{color:#91a0b5}.tree-item kbd{margin-left:auto;color:#6f829c;font-size:9px}.explorer-bottom{margin-top:auto;border-top:1px solid #263448}.explorer-bottom .tree-root{border-bottom:1px solid #263448;color:#8293aa;font-size:9px}.explorer-status{padding:10px 12px;border-top:1px solid #263448;color:#8394aa;font-size:9px}
+.editor{display:flex;flex-direction:column;min-width:0;background:#0e1724}.editor-tabs{height:39px;display:flex;align-items:stretch;background:#111c2b;border-bottom:1px solid #263448}.editor-tab{display:flex;align-items:center;gap:8px;padding:0 14px;border-right:1px solid #263448;border-top:1px solid #65b9dc;background:#0e1724;color:#dce9f7;font-size:10px}.tab-file-icon{color:#78b9e4}.tab-x{margin-left:10px;color:#788ba4}.editor-tab-placeholder{align-self:center;margin-left:14px;color:#657890;font-size:9px}.editor-tab-actions{margin:auto 14px auto auto;color:#8192a8;letter-spacing:2px}.editor-content{padding:15px;min-width:0}.status-bar{display:flex;align-items:center;gap:18px;min-height:23px;margin-top:auto;padding:4px 10px;background:#1d5270;color:#e1f2fa;font-size:9px}.status-bar span:first-child{font-weight:750}.status-bar span:nth-child(2){margin-right:auto}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 12px}.stat,.panel{border:1px solid #29394e;border-radius:6px;background:#141f2e}.stat{position:relative;min-height:90px;padding:13px 14px}.stat span{display:block;color:#9aabc1;font-size:10px}.stat strong{display:block;margin-top:5px;color:#e9f2fc;font-size:24px;font-variant-numeric:tabular-nums}.stat small{display:block;margin-top:3px;color:#637892;font-size:8px;letter-spacing:.8px}.panel{padding:16px;margin-top:11px;scroll-margin-top:60px}.panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.panel-heading h2,.note-panel h2{margin:0;color:#e4edf8;font-size:14px}.muted{color:#8495ad;font-size:10px;line-height:1.6}.item-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}.item-actions button{border:1px solid #35465d;border-radius:5px;padding:7px 9px;color:#d7e5f5;background:#1a293a;font-size:9px}.item-actions button:hover{background:#263b52}.item-actions .danger{color:#ffadb9;border-color:#70404d;background:#2c1d27}.primary{border:1px solid #39799a;border-radius:5px;padding:9px 13px;color:#ecfaff;background:#245b78;font-size:10px;font-weight:750}.primary:hover{background:#2d7192}
+input,textarea,select{width:100%;min-width:0;border:1px solid #35465c;border-radius:5px;padding:9px 10px;outline:none;color:#e3edf9;background:#0d1724;font-size:11px}input:focus,textarea:focus,select:focus{border-color:#5cabc9;box-shadow:0 0 0 2px #5cabc922}textarea{resize:vertical;line-height:1.6}label{display:grid;gap:6px;color:#aebcd0;font-size:10px;font-weight:650}.announcement-form{display:grid;gap:11px;padding:13px;border:1px solid #29394e;border-radius:5px;background:#101a28}.announcement-form .check{display:flex;align-items:center;gap:8px}.announcement-form .check input{width:auto}.announcement-form .primary{justify-self:start}
+.item-list{display:grid;gap:8px;margin-top:12px}.announcement-item{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px;border:1px solid #29394e;border-radius:5px;background:#111c2a}.announcement-item h3{margin:0;color:#e2edf9;font-size:11px}.announcement-item p{margin:6px 0;color:#a7b6ca;font-size:10px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}.announcement-item small{color:#7387a2;font-size:9px}.search-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:11px}.search-row input{flex:1 1 220px}.search-row select{width:auto;max-width:180px}.search-row button{width:auto}.search-summary{margin:0 0 10px;color:#8496af;font-size:9px}.table-wrap{overflow-x:auto;border:1px solid #29394e;border-radius:5px}table{width:100%;border-collapse:collapse;min-width:650px;text-align:left}th,td{padding:10px 11px;border-bottom:1px solid #263448;font-size:10px}th{color:#8fa2bc;background:#172436;font-weight:750}td{color:#d2deed}tbody tr:hover{background:#172638}tbody tr:last-child td{border-bottom:0}.role-admin{color:#89d5bc}.delete-user{border:1px solid #70404d;border-radius:4px;padding:5px 8px;color:#ffadb9;background:#2c1d27;font-size:9px}.pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;color:#94a6be;font-size:10px}.pager button:disabled{opacity:.35;cursor:not-allowed}.note-panel p{color:#93a5bd;font-size:10px;line-height:1.7}
+.security-engine-links{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin-bottom:10px;padding:9px 11px;border:1px solid #29485b;border-radius:5px;background:#122536;font-size:10px}.security-engine-links a,.security-result-link{color:#9dd8ef;text-decoration:none}.security-engine-links a:hover,.security-result-link:hover{text-decoration:underline}.security-engine-links span{color:#8b9eb7}.security-summary{padding:11px 13px;border:1px solid #35465d;border-radius:5px;color:#dce8f5;background:#111c2a;font-size:11px}.security-summary[data-status="critical"],.security-summary[data-status="error"]{border-color:#754454;color:#ffb6c0}.security-summary[data-status="warning"]{border-color:#715b3c;color:#f0c58d}.security-check-list{display:grid;gap:7px;margin:10px 0}.security-check-item{display:grid;grid-template-columns:minmax(150px,1fr) auto;gap:6px 12px;padding:11px;border:1px solid #29394e;border-radius:5px;background:#111c2a}.security-check-item strong{color:#e3edf8;font-size:10px}.security-check-item p{grid-column:1/-1;margin:0;color:#9eafc5;font-size:10px;line-height:1.6}.security-status{align-self:start;padding:4px 7px;border-radius:3px;font-size:9px}.security-status.ok{color:#9ce0c8;background:#18352f}.security-status.warning{color:#f0c58d;background:#392e1d}.security-status.critical,.security-status.error{color:#ffb4bf;background:#3a202b}.security-result-link{grid-column:1/-1;justify-self:start;font-size:10px}details{margin-top:8px;color:#a8bad0;font-size:10px}details summary{cursor:pointer;color:#9cc8dc}details pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#b7c5d9;background:#0d1724;padding:10px;border-radius:4px;font:10px/1.7 inherit}
+[hidden]{display:none!important}
+@media(max-width:1000px){.admin-workspace{grid-template-columns:42px 190px minmax(0,1fr)}.app-shell{padding:14px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.search-row select{max-width:150px}}
+@media(max-width:720px){.topbar{padding:7px 11px;height:auto;min-height:48px;gap:8px}.brand-context,.brand-divider{display:none}.top-actions{gap:8px}.connection-state{display:none}.top-actions a{font-size:9px}.app-shell{padding:11px}.intro{align-items:flex-start;flex-direction:column;gap:10px}.intro h1{font-size:20px}.admin-workspace{grid-template-columns:38px minmax(0,1fr);min-height:0}.activity-bar{grid-column:1;grid-row:1 / span 2}.explorer{grid-column:2;grid-row:1;display:block;border-right:0;border-bottom:1px solid #263448}.explorer-heading,.explorer-bottom,.explorer-status{display:none}.tree-root{padding:7px 9px}.tree-group{display:flex;flex-wrap:wrap;gap:3px;padding:0 6px 7px}.tree-item{min-height:29px;padding:6px 8px}.tree-item kbd{display:none}.editor{grid-column:2;grid-row:2}.editor-tabs{height:35px}.editor-content{padding:9px}.stats{gap:7px}.stat{min-height:78px;padding:10px}.stat strong{font-size:21px}.panel{padding:12px;margin-top:9px}.panel-heading{align-items:flex-start;flex-direction:column}.panel-heading .item-actions{width:100%;flex-wrap:wrap}.announcement-item{flex-direction:column}.item-actions{flex-wrap:wrap}.search-row input,.search-row select{width:100%;max-width:none;flex:1 1 100%}.status-bar{flex-wrap:wrap;gap:7px;font-size:8px}.status-bar span:nth-child(2){margin-right:0}}
+@media(max-width:420px){.top-actions a:first-of-type{display:none}.brand-name{font-size:11px}.brand-mark{width:22px;height:22px}.stats{grid-template-columns:1fr 1fr}.activity-icon{width:31px}.security-check-item{grid-template-columns:1fr}.security-check-item p{grid-column:1}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
+
+/* Fixed-viewport workspace: navigation switches views instead of scrolling the page. */
+html,body.admin-app{width:100%;height:100%;min-height:0;overflow:hidden}
+body.admin-app{position:fixed;inset:0;display:flex;flex-direction:column}
+body.admin-app>.topbar{position:relative;flex:0 0 48px}
+body.admin-app>.app-shell{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;height:calc(100dvh - 48px);padding:10px 14px 12px;overflow:hidden}
+body.admin-app .intro{flex:0 0 auto;margin:0 auto 7px;width:100%;align-items:center}
+body.admin-app .intro h1{font-size:19px}
+body.admin-app .intro p:not(.eyebrow){margin-top:3px}
+body.admin-app .eyebrow{margin-bottom:3px}
+body.admin-app #notice{flex:0 0 auto;margin-bottom:7px;padding:7px 10px}
+body.admin-app .admin-workspace{flex:1 1 auto;min-height:0;height:100%;grid-template-rows:minmax(0,1fr);overflow:hidden}
+body.admin-app .editor{min-height:0;overflow:hidden}
+body.admin-app .editor-content{flex:1 1 auto;min-height:0;overflow:hidden;padding:10px;display:flex;flex-direction:column}
+body.admin-app .editor-content>.panel{display:none;flex:1 1 auto;min-height:0;margin:0;padding:12px;overflow:hidden}
+body.admin-app .editor-content>.panel.active-view{display:flex;flex-direction:column}
+body.admin-app .editor-content>.panel .panel-heading{flex:0 0 auto;margin-bottom:9px}
+body.admin-app .editor-content>.panel .item-list,
+body.admin-app .editor-content>.panel .table-wrap,
+body.admin-app .editor-content>.panel .security-check-list{min-height:0;overflow:auto;overscroll-behavior:contain}
+body.admin-app .editor-content>.panel .announcement-form{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(130px,.65fr);align-items:end;gap:8px;padding:9px}
+body.admin-app .editor-content>.panel .announcement-form textarea{height:54px;min-height:54px;resize:none}
+body.admin-app .editor-content>.panel .announcement-form .check{align-self:center}
+body.admin-app .editor-content>.panel .announcement-form .primary{align-self:center}
+body.admin-app .editor-content>.panel .search-row{flex-wrap:nowrap}
+body.admin-app .editor-content>.panel .search-row input{flex:1 1 180px}
+body.admin-app .editor-content>.panel .search-row select{max-width:150px}
+body.admin-app .editor-content>.stats{display:none;flex:1 1 auto;align-content:center;grid-template-columns:repeat(3,minmax(0,1fr))}
+body.admin-app .editor-content>.stats.active-view{display:grid}
+body.admin-app .stat{min-height:100px}
+body.admin-app .status-bar{flex:0 0 23px}
+@media(max-width:900px){
+ body.admin-app .admin-workspace{grid-template-columns:38px minmax(0,1fr)}
+ body.admin-app .explorer{display:none}
+ body.admin-app .editor-content>.panel{padding:9px}
+ body.admin-app .editor-content>.panel .announcement-form{grid-template-columns:1fr 1fr}
+}
+@media(max-width:720px){
+ body.admin-app>.topbar{flex-basis:43px;min-height:43px;padding:0 9px}
+ body.admin-app .top-actions{gap:7px;font-size:9px}
+ body.admin-app .top-actions .connection-state{display:none}
+ body.admin-app>.app-shell{height:calc(100dvh - 43px);padding:6px}
+ body.admin-app .intro{display:none}
+ body.admin-app #notice{font-size:10px;padding:6px 8px}
+ body.admin-app .admin-workspace{grid-template-columns:34px minmax(0,1fr)}
+ body.admin-app .activity-bar{gap:2px;padding:5px 0}
+ body.admin-app .activity-icon{width:30px;height:35px}
+ body.admin-app .editor-tabs{height:32px;flex:0 0 32px}
+ body.admin-app .editor-content{padding:6px}
+ body.admin-app .editor-content>.stats.active-view{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ body.admin-app .stat{min-height:74px;padding:9px}
+ body.admin-app .stat strong{font-size:20px}
+ body.admin-app .editor-content>.panel{padding:8px}
+ body.admin-app .editor-content>.panel .panel-heading{gap:6px;flex-direction:row;align-items:center}
+ body.admin-app .editor-content>.panel .panel-heading h2{font-size:12px}
+ body.admin-app .editor-content>.panel .announcement-form{grid-template-columns:1fr;gap:6px}
+ body.admin-app .editor-content>.panel .announcement-form textarea{height:42px;min-height:42px}
+ body.admin-app .editor-content>.panel .search-row{flex-wrap:wrap;gap:5px}
+ body.admin-app .editor-content>.panel .search-row input{flex:1 1 100%}
+ body.admin-app .editor-content>.panel .search-row select{flex:1 1 30%;max-width:none}
+ body.admin-app .editor-content>.panel .muted{font-size:9px}
+ body.admin-app .status-bar{min-height:20px;flex-basis:20px;gap:8px;font-size:8px}
+ body.admin-app .status-bar span:nth-child(2){display:none}
+}
+@media(max-height:650px){
+ body.admin-app>.app-shell{padding-top:5px;padding-bottom:5px}
+ body.admin-app .stat{min-height:62px}
+ body.admin-app .editor-content>.panel{padding:7px}
+ body.admin-app .editor-content>.panel .panel-heading{margin-bottom:5px}
+ body.admin-app .editor-content>.panel .security-check-item{padding:7px}
+}
+
+
+/* Feedback page: fixed viewport and concise report form. */
+html,body:not(.admin-app){width:100%;height:100%;min-height:0;overflow:hidden}
+body:not(.admin-app){position:fixed;inset:0;display:flex;flex-direction:column}
+body:not(.admin-app)>.topbar{flex:0 0 48px}
+body:not(.admin-app)>.layout{display:flex;flex:1 1 auto;flex-direction:column;gap:9px;min-height:0;width:min(1100px,calc(100% - 28px));margin:0 auto;padding:12px 0;overflow:hidden}
+body:not(.admin-app) .intro{flex:0 0 auto;margin:0}
+body:not(.admin-app) .intro h1{font-size:20px}
+body:not(.admin-app) #report-notice{flex:0 0 auto;margin:0;padding:8px 11px}
+body:not(.admin-app) #report-panel,body:not(.admin-app) #my-reports-panel{flex:1 1 0;min-height:0;margin:0;padding:12px;overflow:hidden}
+body:not(.admin-app) #report-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);grid-template-areas:"category title" "description description" "advanced advanced" "note submit";gap:8px 12px;padding:0;border:0;background:transparent}
+body:not(.admin-app) #report-form>label:nth-child(1){grid-area:category}
+body:not(.admin-app) #report-form>label:nth-child(2){grid-area:title}
+body:not(.admin-app) #report-form>label:nth-child(3){grid-area:description}
+body:not(.admin-app) #report-form>label textarea{height:82px;min-height:82px;resize:none}
+body:not(.admin-app) #report-form>label:nth-child(1) select,body:not(.admin-app) #report-form>label:nth-child(2) input{height:38px}
+body:not(.admin-app) #report-form .report-advanced{grid-area:advanced;padding:7px 10px;border:1px solid #29394e;border-radius:5px;background:#101a28}
+body:not(.admin-app) #report-form .report-advanced summary{cursor:pointer;color:#9cc8dc;font-size:10px}
+body:not(.admin-app) #report-form .report-advanced-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:8px}
+body:not(.admin-app) #report-form .report-advanced textarea{height:58px;min-height:58px}
+body:not(.admin-app) #report-form>.muted{grid-area:note;align-self:center;margin:0;font-size:9px}
+body:not(.admin-app) #report-form>.primary{grid-area:submit;justify-self:end;align-self:center}
+body:not(.admin-app) #my-reports-panel{display:flex;flex-direction:column}
+body:not(.admin-app) #my-reports{min-height:0;overflow:auto;overscroll-behavior:contain}
+@media(max-width:650px){
+ body:not(.admin-app)>.topbar{flex-basis:42px;min-height:42px;padding:0 10px}
+ body:not(.admin-app)>.layout{width:calc(100% - 18px);padding:7px 0;gap:6px}
+ body:not(.admin-app) .intro h1{font-size:16px}
+ body:not(.admin-app) .intro p:not(.eyebrow){font-size:9px}
+ body:not(.admin-app) #report-panel,body:not(.admin-app) #my-reports-panel{padding:8px}
+ body:not(.admin-app) #report-form{grid-template-columns:1fr 1.4fr;gap:6px}
+ body:not(.admin-app) #report-form>label textarea{height:72px;min-height:72px}
+ body:not(.admin-app) #report-form .report-advanced-grid{grid-template-columns:1fr}
+ body:not(.admin-app) #report-form>.muted{font-size:8px;line-height:1.35}
+ body:not(.admin-app) #report-form>.primary{padding:8px;font-size:9px}
+}
+@media(max-height:620px){
+ body:not(.admin-app)>.layout{padding:5px 0;gap:5px}
+ body:not(.admin-app) .intro{display:none}
+ body:not(.admin-app) #report-form>label textarea{height:58px;min-height:58px}
+}
+
+
+.report-view-tabs{display:flex;flex:0 0 auto;gap:6px;padding:4px;border:1px solid #29394e;border-radius:6px;background:#131e2d}
+.report-view-tabs button{flex:1;min-height:34px;border:1px solid transparent;border-radius:4px;color:#9fb1c8;background:transparent;font-size:10px;font-weight:700}
+.report-view-tabs button.active{border-color:#35566b;color:#e4f8ff;background:#1a3549}
+body:not(.admin-app) #report-panel{flex:1 1 auto}
+body:not(.admin-app) #my-reports-panel{flex:1 1 auto}
+@media(max-width:650px){.report-view-tabs button{min-height:32px}}
