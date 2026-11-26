@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>SecureChat | 管理コンソール</title>
+<link rel="stylesheet" href="/admin.css">
+<script src="/admin.js" defer></script>
+</head>
+<body class="admin-app">
+<header class="topbar">
+  <a class="brand" href="/" aria-label="SecureChat ホーム"><span class="brand-mark">S</span><span class="brand-name">SecureChat</span><span class="brand-divider">/</span><span class="brand-context">管理コンソール</span></a>
+  <div class="top-actions"><span class="connection-state"><i></i> SECURE SESSION</span><span id="admin-identity">認証確認中</span><a href="/bug-report">バグ報告</a><a href="/">チャットへ戻る</a><button id="logout" type="button">ログアウト</button></div>
+</header>
+<main class="app-shell">
+  <section class="intro">
+    <div><p class="eyebrow">WORKSPACE / ADMINISTRATION</p><h1>管理ワークスペース</h1><p>ユーザー、暗号化、セキュリティ、運用状況を一か所で管理します。</p></div>
+    <div class="secure-pill"><i></i> SERVER-SIDE AUTHORIZATION</div>
+  </section>
+  <div id="notice" class="notice" role="status">管理者権限を確認しています…</div>
+  <section id="console" hidden class="admin-workspace">
+    <nav class="activity-bar" aria-label="主要メニュー">
+      <a class="activity-icon active" href="#stats" aria-label="概要" title="概要">▦</a>
+      <a class="activity-icon" href="#users-panel" aria-label="ユーザー" title="ユーザー">♙</a>
+      <a class="activity-icon" href="#announcements-panel" aria-label="お知らせ" title="お知らせ">▤</a>
+      <a class="activity-icon" href="#reports-panel" aria-label="不具合報告" title="不具合報告">⚑</a>
+      <a class="activity-icon" href="#security-panel" aria-label="セキュリティ" title="セキュリティ">◇</a>
+      <a class="activity-icon" href="#audit-panel" aria-label="監査ログ" title="監査ログ">⌁</a>
+      <a class="activity-icon activity-bottom" href="#ops-panel" aria-label="運用設定" title="運用設定">⚙</a>
+    </nav>
+    <aside class="explorer" aria-label="ワークスペース エクスプローラー">
+      <div class="explorer-heading"><span>エクスプローラー</span><span class="explorer-more">•••</span></div>
+      <div class="tree-root"><span class="tree-chevron">⌄</span><span class="tree-folder">▰</span> SECURECHAT</div>
+      <div class="tree-group">
+        <a href="#stats" class="tree-item active"><span class="tree-symbol blue">▦</span>概要 <kbd>⌘1</kbd></a>
+        <a href="#users-panel" class="tree-item"><span class="tree-symbol cyan">♙</span>ユーザー管理</a>
+        <a href="#announcements-panel" class="tree-item"><span class="tree-symbol yellow">▤</span>お知らせ</a>
+        <a href="#reports-panel" class="tree-item"><span class="tree-symbol orange">⚑</span>不具合報告</a>
+        <a href="#security-panel" class="tree-item"><span class="tree-symbol green">◇</span>セキュリティ診断</a>
+        <a href="#audit-panel" class="tree-item"><span class="tree-symbol purple">⌁</span>監査ログ</a>
+        <a href="#ops-panel" class="tree-item"><span class="tree-symbol muted-symbol">⚙</span>運用メモ</a>
+      </div>
+      <div class="explorer-bottom"><div class="tree-root"><span class="tree-chevron">›</span> OUTLINE</div><div class="tree-root"><span class="tree-chevron">›</span> TIMELINE</div></div>
+      <div class="explorer-status"><i></i> 管理者ワークスペース</div>
+    </aside>
+    <div class="editor">
+      <div class="editor-tabs"><div class="editor-tab"><span class="tab-file-icon">▦</span> overview.admin <span class="tab-x">×</span></div><div class="editor-tab-placeholder">SecureChat / admin</div><span class="editor-tab-actions">•••</span></div>
+      <div class="editor-content">
+        <section class="stats" id="stats">
+          <article class="stat"><span>登録ユーザー</span><strong id="stat-users">—</strong><small>REGISTERED USERS</small></article>
+          <article class="stat"><span>管理者</span><strong id="stat-admins">—</strong><small>ADMINISTRATORS</small></article>
+          <article class="stat"><span>有効セッション</span><strong id="stat-sessions">—</strong><small>ACTIVE SESSIONS</small></article>
+          <article class="stat"><span>保存中メッセージ</span><strong id="stat-messages">—</strong><small>STORED MESSAGES</small></article>
+          <article class="stat"><span>進行中の招待</span><strong id="stat-invites">—</strong><small>PENDING INVITATIONS</small></article>
+          <article class="stat"><span>過去24時間の管理操作</span><strong id="stat-actions">—</strong><small>ADMIN ACTIONS / 24H</small></article>
+        </section>
+        <section class="panel" id="security-panel">
+          <div class="panel-heading"><div><p class="eyebrow">SECURITY DIAGNOSTICS</p><h2>セキュリティチェック</h2></div><div class="item-actions"><button id="export-security-csv" class="secondary" type="button" disabled>CSVで出力</button><button id="run-security-check" class="secondary" type="button">今すぐ再チェック</button></div></div>
+          <div class="security-engine-links"><a href="https://github.com/hugohinoto/SecureChat/actions/workflows/security-scan.yml" target="_blank" rel="noopener noreferrer">外部エンジンの実行履歴を開く ↗</a><span>Semgrep・SQLFluff・OWASP ZAP。未実行・取得不能は安全扱いしません。</span></div>
+          <div id="security-summary" class="security-summary">チェックを実行しています…</div><div id="security-checks" class="security-check-list"></div>
+          <p class="muted">ランタイム・D1構造・マイグレーション・外部エンジンを組み合わせた診断です。最新エンジン結果の照合にはWorker Secret SECURITY_SCAN_GITHUB_TOKEN（Actions: read）が必要です。ZAPは公開面へのパッシブ検査のみで、認証後のAPIやCloudflare内部ログの完全監査を代替するものではありません。</p>
+        </section>
+        <section class="panel" id="announcements-panel">
+          <div class="panel-heading"><div><p class="eyebrow">ANNOUNCEMENTS</p><h2>暗号化お知らせ</h2></div><span class="muted">公開から48時間で自動失効（公開時に変更可能）</span></div>
+          <form id="announcement-form" class="announcement-form">
+            <label>タイトル<input id="announcement-title" maxlength="100" required placeholder="例：メンテナンスのお知らせ"></label>
+            <label>本文<textarea id="announcement-body" rows="4" maxlength="3000" required placeholder="お知らせ内容を入力してください"></textarea></label>
+            <label>公開期限<select id="announcement-expiry"><option value="24">24時間</option><option value="48" selected>48時間（標準）</option><option value="72">72時間</option><option value="168">7日間</option></select></label>
+            <label class="check"><input id="announcement-publish" type="checkbox" checked> 作成と同時に公開する</label>
+            <button class="primary" type="submit">暗号化して作成</button>
+          </form>
+          <div id="announcements" class="item-list"></div>
+        </section>
+        <section class="panel" id="users-panel">
+          <div class="panel-heading"><div><p class="eyebrow">USER DIRECTORY</p><h2>ユーザー管理</h2></div><span class="muted">削除は取り消せません。管理者アカウントは保護されます。</span></div>
+          <form id="user-search" class="search-row"><input id="user-query" maxlength="64" placeholder="ユーザーIDまたはUUIDを入力"><select id="user-search-mode"><option value="prefix">先頭一致</option><option value="contains">部分一致</option><option value="exact">完全一致（UUID可）</option></select><select id="user-role-filter"><option value="all">全ユーザー</option><option value="admin">管理者のみ</option><option value="user">一般ユーザーのみ</option></select><select id="user-sort"><option value="created_desc">登録が新しい順</option><option value="created_asc">登録が古い順</option><option value="login_desc">最終ログイン順</option><option value="user_id_asc">ユーザーID順</option></select><button type="submit">検索</button><button type="button" id="user-reset" class="secondary">リセット</button></form>
+          <div class="search-summary" id="user-search-summary"></div>
+          <div class="table-wrap"><table><thead><tr><th>ユーザーID</th><th>権限</th><th>登録日時</th><th>最終ログイン</th><th>操作</th></tr></thead><tbody id="users"></tbody></table></div>
+          <div class="pager"><button id="prev-page" class="secondary" type="button">前へ</button><span id="page-label">—</span><button id="next-page" class="secondary" type="button">次へ</button></div>
+        </section>
+        <section class="panel" id="reports-panel"><div class="panel-heading"><div><p class="eyebrow">BUG REPORTS</p><h2>バグ・不具合報告</h2></div><button id="refresh-reports" class="secondary" type="button">更新</button></div><div id="bug-reports" class="item-list"></div></section>
+        <section class="panel" id="audit-panel"><div class="panel-heading"><div><p class="eyebrow">ADMIN AUDIT TRAIL</p><h2>暗号化管理操作ログ</h2></div><button id="refresh-logs" class="secondary" type="button">更新</button></div><div class="table-wrap"><table><thead><tr><th>日時</th><th>管理者</th><th>操作</th><th>対象</th><th>詳細（復号表示）</th></tr></thead><tbody id="logs"></tbody></table></div></section>
+        <section class="panel note-panel" id="ops-panel"><h2>運用上の注意</h2><p id="worker-note">CloudflareのInvocation Logsはアプリ側から個別に暗号化できません。ログへ機密値を出力しない設定が必要です。</p><p>管理者APIはサーバー側で権限・パスワード更新期限・直近15分の再認証を確認します。パスキーはまだ未実装です。</p></section>
+      </div>
+      <footer class="status-bar"><span><i></i> SecureChat Admin</span><span>管理者認証・再認証が有効</span><span>UTF-8</span><span>Cloudflare Workers / D1</span></footer>
+    </div>
+  </section>
+</main>
+</body>
+</html>
