@@ -339,9 +339,10 @@ async function isServerReachable(origin: string): Promise<boolean> {
       signal: AbortSignal.timeout(8000),
       headers: { Accept: "application/json", "Cache-Control": "no-cache" }
     });
-    // 2xx–4xx means the server answered. In particular, 401 is a normal unauthenticated response.
-    // Do not inspect Response.url: Electron's net.fetch may expose a normalized/empty URL.
-    return response.status >= 200 && response.status < 500;
+    // Any valid HTTP response means the host is reachable, even if its API currently returns 5xx.
+    // In particular, 401 is a normal unauthenticated response. Do not inspect Response.url:
+    // Electron net.fetch may expose a normalized/empty URL. API errors are surfaced separately.
+    return response.status >= 100 && response.status < 600;
   } catch {
     return false;
   }
