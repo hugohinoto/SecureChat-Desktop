@@ -17,6 +17,6 @@ Desktop must not integrate a separate PQ protocol implementation. Any selected P
 - crash/restart recovery and concurrent-instance protection;
 - fail-closed negotiation with no plaintext or silent classical fallback.
 
-The official Signal libsignal repository is a candidate for technical evaluation, not an approved dependency. Its current repository license is AGPL-3.0-only, so licensing and distribution review is required before adoption. Do not change SecureChat's Apache-2.0 project license implicitly.
+The official Signal libsignal repository is a candidate for technical evaluation, not an approved dependency. Its current repository license is AGPL-3.0, so licensing and distribution review is required before adoption. Do not change SecureChat's Apache-2.0 project license implicitly.
 
 No PQ runtime code, dependency, database migration, or security claim is introduced by this document.
