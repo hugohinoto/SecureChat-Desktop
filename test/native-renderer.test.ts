@@ -45,14 +45,14 @@ test("offline workspace uses the same bundled SecureChat visual system", async (
     assert.ok(css.includes(token), `missing shared visual token: ${token}`);
   }
   assert.match(js, /addLocalMessage/);
-  assert.match(js, /相手には送信されません/);
+  assert.match(html, /相手には送信されません/);
   assert.match(html, /styles\.css/);
   assert.match(html, /ui-refresh\.css/);
 });
 
 test("bundled client build rewrites web paths and applies a local-only CSP", async () => {
   const script = await readFile("scripts/copy-renderer.cjs", "utf8");
-  assert.match(script, /href="\\//);
+  assert.ok(script.includes("href=\"\\\\/"));
   assert.match(script, /crypto-v2\.bundle\.js/);
   assert.match(script, /connect-src 'self' data:/);
   assert.match(script, /loader: \{ "\.wasm": "dataurl" \}/);
