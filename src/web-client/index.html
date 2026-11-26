@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="description" content="SecureChat — 招待制のプライベートメッセージング">
+  <title>SecureChat — プライベートチャットのための実験室</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/ui-refresh.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <main class="app-shell">
+    <aside class="sidebar glass-panel" aria-label="チャットメニュー">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M16 3.5 27 8v7.2c0 7.1-4.7 11.5-11 13.3C9.7 26.7 5 22.3 5 15.2V8l11-4.5Z" stroke="currentColor" stroke-width="1.7"/>
+            <path d="m11.2 16.1 3.2 3.1 6.6-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">SecureChat</div>
+          <div class="brand-caption">PRIVATE MESSAGING · v0.5.0</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section-label">WORKSPACE</div>
+      <div class="workspace-card">
+        <div class="workspace-icon">S</div>
+        <div class="workspace-copy">
+          <strong>SecureChat Lab</strong>
+          <span>招待制プライベートスペース</span>
+        </div>
+        <span class="workspace-dot" aria-hidden="true"></span>
+      </div>
+      <nav class="workspace-navigation" aria-label="ワークスペース">
+        <a class="workspace-nav-link active" href="/" aria-current="page">
+          <span aria-hidden="true">▣</span><span>チャット</span>
+        </a>
+        <a class="workspace-nav-link" href="/secure-drop.html">
+          <span aria-hidden="true">⇧</span><span>SecureDrop</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-heading"><span>ユーザーを検索</span></div>
+      <div class="user-search">
+        <input id="user-search-input" type="text" maxlength="32" placeholder="ユーザーIDを入力" autocomplete="off">
+        <button id="user-search-button" type="button">検索</button>
+      </div>
+      <div class="user-search-results" id="user-search-results" aria-live="polite"></div>
+      <div class="sidebar-heading"><span>アカウント招待</span></div>
+      <div class="user-search-results" id="registration-invite-result">
+        <button class="registration-invite-button" id="registration-invite-button" type="button">新しい招待コードを発行</button>
+        <p class="sidebar-empty">コードは24時間有効・1回限りです。有効なコードは最大5件まで発行できます。</p>
+      </div>
+      <div class="sidebar-heading"><span>ワンタイムコード招待</span></div>
+      <div class="invitation-list" id="invitation-list" aria-live="polite"><p class="sidebar-empty">進行中の招待はありません。</p></div>
+      <div class="sidebar-heading"><span>連絡先</span><span class="count-pill" id="contact-count">0</span></div>
+      <div class="contact-list" id="contact-list"><p class="sidebar-empty">連絡先はまだありません。</p></div>
+      <div class="sidebar-heading"><span>メッセージ</span><span class="sidebar-heading-counts"><span class="count-pill" id="conversation-count">0</span><span class="count-pill unread-total" id="unread-total" hidden>未読 0</span></span></div>
+      <div class="conversation-list" id="conversation-list"><p class="sidebar-empty">チャットはまだありません。</p></div>
+      <div class="sidebar-note">
+        <span class="note-icon" aria-hidden="true">ⓘ</span>
+        <p>連絡先の追加には双方の8桁コード確認が必要です。暗号化プロトコル v2（Olm / Megolm）を利用可能です。V2への移行は双方の端末で相手の指紋を確認すると自動で行われます。端末・ブラウザーごとに暗号鍵が管理されます。未監査のため高機密情報の利用は避けてください。</p>
+      </div>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="profile-card">
+        <div class="profile-avatar" id="profile-avatar" aria-hidden="true">U</div>
+        <div class="profile-copy">
+          <strong id="profile-name">未ログイン</strong>
+          <span>ログイン中のユーザー</span>
+        </div>
+        <button class="icon-button profile-edit" id="logout-button" type="button" aria-label="ログアウト" title="ログアウト">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M10 5H5.8A1.8 1.8 0 0 0 4 6.8v10.4A1.8 1.8 0 0 0 5.8 19H10M14 8l4 4-4 4M8 12h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <a class="admin-link" id="admin-link" href="/admin" hidden>管理者コンソール</a>
+      <a class="admin-link" id="bug-report-link" href="/bug-report">バグ報告・不具合連絡</a>
+      <button class="notification-enable-button" id="notification-enable-button" type="button">ブラウザー通知を有効にする</button>
+      <button class="delete-account-button" id="delete-account-button" type="button">アカウントを削除</button>
+    </aside>
+
+    <section class="chat-panel glass-panel" aria-label="チャット">
+      <header class="chat-header">
+        <div class="room-title-wrap">
+          <button class="mobile-back-button" id="mobile-back-button" type="button" aria-label="チャット一覧に戻る" title="チャット一覧に戻る">←</button>
+          <div class="room-title-avatar">#</div>
+          <div>
+            <h1 id="chat-title">個別チャットを選択</h1>
+            <p id="chat-subtitle">ユーザーを検索するか、連絡先を選択してください</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="connection-pill" id="connection-pill" data-state="connecting">
+            <span class="connection-dot" aria-hidden="true"></span>
+            <span id="connection-label">接続中</span>
+          </div>
+          <div class="prototype-pill">会話別 E2EE</div>
+        </div>
+      </header>
+
+      <section class="security-banner" aria-label="重要なお知らせ">
+        <div class="security-symbol" aria-hidden="true">!</div>
+        <div class="security-copy">
+          <strong id="security-title">暗号化方式は会話ごとに異なります</strong>
+          <span id="security-description">会話を選択すると、その会話で実際に使用している暗号化方式と前方秘匿性の状態を表示します。</span>
+        </div>
+        <span class="banner-tag" id="security-tag">会話未選択</span>
+      </section>
+      <div class="crypto-v2-actions" aria-live="polite">
+        <p id="crypto-v2-status">前方秘匿性v2は安全確認中です。</p>
+        <button class="crypto-v2-button" id="crypto-v2-approve-button" type="button" hidden>前方秘匿性v2へ移行（双方の承認）</button>
+        <button class="crypto-v2-button crypto-v2-secondary" id="crypto-v2-devices-toggle" type="button" aria-expanded="false" aria-controls="crypto-v2-devices" hidden>登録端末を管理</button>
+      </div>
+      <section class="crypto-v2-devices" id="crypto-v2-devices" hidden aria-label="暗号化端末一覧">
+        <h2>このアカウントの暗号化端末</h2>
+        <p>端末を失効すると、残存端末は次回同期時に会話用Megolm鍵を更新します。失効端末がオフラインの場合、受信・同期まで反映に時間がかかります。</p>
+        <div id="crypto-v2-device-list" aria-live="polite"></div>
+      </section>
+      <details class="public-announcements" id="public-announcements" hidden aria-label="運営からのお知らせ">
+        <summary class="public-announcements-toggle">
+          <span class="public-announcements-heading">運営からのお知らせ</span>
+          <span class="public-announcements-hint">クリックして内容を表示</span>
+        </summary>
+        <div class="public-announcements-content" id="public-announcements-list"></div>
+      </details>
+      <div class="fingerprint-panel" id="key-fingerprint" hidden></div>
+
+      <div class="timeline" id="message-list" aria-live="polite" aria-relevant="additions">
+        <div class="day-divider"><span>SECURECHAT LAB</span></div>
+        <div class="welcome-card">
+          <div class="welcome-orb" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none">
+              <path d="M20 4 33 9.3v8.5c0 8.3-5.5 13.5-13 16.2C12.5 31.3 7 26.1 7 17.8V9.3L20 4Z" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M14.5 19.8h11M20 14.3v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2>会話のための、静かな場所。</h2>
+          <p>連絡先を追加して、1対1の暗号化チャットを始めましょう。メッセージは送信から1時間で削除されます。</p>
+          <div class="welcome-meta">
+            <span class="welcome-line"></span>
+            <span>ここから会話を始めましょう</span>
+            <span class="welcome-line"></span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="composer-area">
+        <div class="composer-hint">
+          <span class="hint-dot"></span>
+          <span id="composer-hint">個別チャットを選択すると送信できます</span>
+        </div>
+        <div class="composer">
+          <textarea id="message-input" rows="1" maxlength="2000" placeholder="メッセージを入力…" aria-label="メッセージを入力" disabled></textarea>
+          <div class="composer-bottom">
+            <span class="composer-shortcut">Enterで送信 · Shift + Enterで改行</span>
+            <div class="composer-actions">
+              <span class="character-count" id="character-count">0 / 2000</span>
+              <button class="send-button" id="send-button" type="button" disabled>
+                <span>送信</span>
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M3 10h13M10 4l6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="footer-caption">SecureChat <span>·</span> 暗号化方式は会話ごとに異なります <span>·</span> 上部の状態表示を確認してください</div>
+      </footer>
+    </section>
+  </main>
+
+
+  <section class="auth-loading" id="auth-loading" role="status" aria-live="polite">
+    <div class="auth-loading-card">
+      <span class="auth-loading-mark" aria-hidden="true">S</span>
+      <strong>SecureChat</strong>
+      <span>ログイン状態を確認しています…</span>
+    </div>
+  </section>
+
+  <section class="auth-gate" id="auth-gate" role="dialog" aria-modal="true" aria-labelledby="auth-title" hidden>
+    <div class="auth-card glass-panel">
+      <div class="auth-brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none">
+          <path d="M16 3.5 27 8v7.2c0 7.1-4.7 11.5-11 13.3C9.7 26.7 5 22.3 5 15.2V8l11-4.5Z" stroke="currentColor" stroke-width="1.7"/>
+          <path d="m11.2 16.1 3.2 3.1 6.6-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="auth-eyebrow">PRIVATE MESSAGING</div>
+      <h2 id="auth-title">SecureChatへようこそ</h2>
+      <p class="auth-description" id="auth-description">アカウントにログインしてください。</p>
+
+      <div class="auth-tabs" role="tablist" aria-label="認証方法">
+        <button class="auth-tab active" id="login-tab" type="button" role="tab" aria-selected="true">ログイン</button>
+        <button class="auth-tab" id="register-tab" type="button" role="tab" aria-selected="false">新規登録</button>
+      </div>
+
+      <form id="auth-form" novalidate>
+        <label class="auth-label" for="auth-user-id">ユーザーID</label>
+        <input class="auth-input" id="auth-user-id" name="userId" type="text" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_]+" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="例: hugo_01">
+        <div class="auth-field-hint">半角英小文字・数字・アンダースコア、3〜32文字</div>
+
+        <label class="auth-label" for="auth-password">パスワード</label>
+        <input class="auth-input" id="auth-password" name="password" type="password" required maxlength="128" autocomplete="current-password" placeholder="パスワードを入力">
+        <div class="auth-field-hint" id="password-hint">登録時は12文字以上にしてください。</div>
+
+        <div id="invite-code-field" hidden>
+          <label class="auth-label" for="auth-invite-code">招待コード</label>
+          <input class="auth-input" id="auth-invite-code" name="inviteCode" type="text" maxlength="64" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="受け取った招待コードを入力">
+          <div class="auth-field-hint">既存ユーザーから受け取ったコードが必要です。</div>
+        </div>
+
+        <p class="auth-error" id="auth-error" role="alert" aria-live="polite"></p>
+        <button class="auth-submit" id="auth-submit" type="submit">ログイン</button>
+      </form>
+
+      <div class="auth-security-note">
+        <span aria-hidden="true">ⓘ</span>
+        <p>暗号化方式は会話ごとに異なります。旧v1の会話には前方秘匿性がありません。会話画面上部の表示を確認してください。暗号実装は未監査のため、機密情報や重要な認証情報の送信には使用しないでください。<br><br>SecureChat運営がメールやDMでパスワードやワンタイムコードを尋ねることはありません。不審な連絡のリンクは開かず、公式サイトを直接開いて確認してください。</p>
+      </div>
+    </div>
+  </section>
+\n  <section class="auth-gate" id="password-change-gate" role="dialog" aria-modal="true" aria-labelledby="password-change-title" hidden>
+    <div class="auth-card glass-panel">
+      <div class="auth-brand-mark" aria-hidden="true">🔐</div>
+      <div class="auth-eyebrow">ADMINISTRATOR SECURITY</div>
+      <h2 id="password-change-title">管理者パスワードの変更</h2>
+      <p class="auth-description">管理者パスワードは90日ごとに変更が必要です。新しいパスワードを設定するまで管理機能は利用できません。</p>
+      <form id="password-change-form" novalidate>
+        <label class="auth-label" for="current-admin-password">現在のパスワード</label>
+        <input class="auth-input" id="current-admin-password" type="password" autocomplete="current-password" required maxlength="128">
+        <label class="auth-label" for="new-admin-password">新しいパスワード</label>
+        <input class="auth-input" id="new-admin-password" type="password" autocomplete="new-password" required minlength="12" maxlength="128">
+        <div class="auth-field-hint">12〜128文字。現在のパスワードとは異なるものを設定してください。</div>
+        <label class="auth-label" for="confirm-admin-password">新しいパスワード（確認）</label>
+        <input class="auth-input" id="confirm-admin-password" type="password" autocomplete="new-password" required minlength="12" maxlength="128">
+        <p class="auth-error" id="password-change-error" role="alert" aria-live="polite"></p>
+        <button class="auth-submit" id="password-change-submit" type="submit">パスワードを変更</button>
+      </form>
+    </div>
+  </section>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
