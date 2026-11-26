@@ -146,11 +146,10 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
     for (const [name, value] of Object.entries(request.headers as Record<string, unknown>)) {
       const normalized = name.toLowerCase();
       if (!allowedDesktopHeaders.has(normalized) || typeof value !== "string" ||
-          value.length > 32768 || /[\\r\\n]/.test(value)) throw new Error("DESKTOP_API_HEADERS_REJECTED");
+          value.length > 32768 || value.includes(String.fromCharCode(13)) || value.includes(String.fromCharCode(10))) throw new Error("DESKTOP_API_HEADERS_REJECTED");
       headers.set(normalized, value);
     }
   }
-  else if (typeof request.contentType === "string" && request.contentType.length <= 128 &&
            (request.contentType.startsWith("application/octet-stream") || request.contentType.startsWith("text/plain"))) headers.set("Content-Type", request.contentType);
   const response = await fetch(target, {
     method, headers, body: requestBody == null ? undefined : (requestBody instanceof ArrayBuffer ? Buffer.from(requestBody) : requestBody instanceof Uint8Array ? Buffer.from(requestBody) : requestBody as string),
