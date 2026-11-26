@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, net, Notification, safeStorage, session, shell } from "electron";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { mkdir, readFile, rename, writeFile, rm } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { validateServerUrl } from "./server-url";
@@ -105,9 +106,8 @@ async function clearStoredSession(): Promise<void> {
   await rm(sessionCookiePath, { force: true }).catch(() => undefined);
 }
 function isTrustedRemoteSender(event: Electron.IpcMainInvokeEvent): boolean {
-  const frameUrl = event.senderFrame?.url || "";
   return !!remoteWindow && event.sender === remoteWindow.webContents &&
-    frameUrl.startsWith("file://") && frameUrl.includes("/renderer/web-client/");
+    isWithinBundledDirectory(event.senderFrame?.url || "", join(__dirname, "renderer", "web-client"));
 }
 async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Promise<{ status: number; body: string | Uint8Array; contentType: string }> {
   if (typeof pathValue !== "string" || pathValue.length > 2048 || !pathValue.startsWith("/api/") ||
@@ -181,13 +181,30 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   if (Buffer.byteLength(body, "utf8") > 32 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
   return { status: response.status, body, contentType };
 }
+function isWithinBundledDirectory(urlValue: string, directory: string): boolean {
+  try {
+    const parsed = new URL(urlValue);
+    if (parsed.protocol !== "file:") return false;
+    const targetPath = resolve(fileURLToPath(parsed));
+    const rootPath = resolve(directory);
+    const relativePath = relative(rootPath, targetPath);
+    return relativePath.length > 0 && relativePath !== ".." &&
+      !relativePath.startsWith(".." + sep) && !isAbsolute(relativePath);
+  } catch { return false; }
+}
+function isExactBundledFile(urlValue: string, filePath: string): boolean {
+  try {
+    const parsed = new URL(urlValue);
+    return parsed.protocol === "file:" && resolve(fileURLToPath(parsed)) === resolve(filePath);
+  } catch { return false; }
+}
 function isTrustedConfigSender(event: Electron.IpcMainInvokeEvent): boolean {
   return !!configWindow && event.sender === configWindow.webContents &&
-    event.senderFrame?.url.startsWith("file://") === true;
+    isExactBundledFile(event.senderFrame?.url || "", join(__dirname, "renderer", "config.html"));
 }
 function isTrustedLocalSender(event: Electron.IpcMainInvokeEvent): boolean {
   return !!localWindow && event.sender === localWindow.webContents &&
-    event.senderFrame?.url.startsWith("file://") === true;
+    isExactBundledFile(event.senderFrame?.url || "", join(__dirname, "renderer", "web-client", "offline.html"));
 }
 function closeSplash(): void {
   if (splashWindow && !splashWindow.isDestroyed()) splashWindow.close();
@@ -242,7 +259,7 @@ function createLocalWindow(enableAutoReconnect = false): void {
   const current = localWindow;
   current.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   current.webContents.on("will-navigate", (event, url) => {
-    if (!url.startsWith("file://")) event.preventDefault();
+    if (!isExactBundledFile(url, join(__dirname, "renderer", "web-client", "offline.html"))) event.preventDefault();
   });
   current.webContents.once("did-finish-load", () => {
     if (connectionState !== "unknown") current.webContents.send("connection:state", connectionState);
@@ -279,12 +296,7 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
     } catch { /* Invalid and non-HTTPS popups are denied. */ }
     return { action: "deny" };
   });
-  const isBundledClientFile = (url: string): boolean => {
-    try {
-      const target = new URL(url);
-      return target.protocol === "file:" && target.pathname.includes("/renderer/web-client/");
-    } catch { return false; }
-  };
+  const isBundledClientFile = (url: string): boolean => isWithinBundledDirectory(url, join(__dirname, "renderer", "web-client"));
   current.webContents.on("will-navigate", (event, url) => {
     if (isBundledClientFile(url)) return;
     event.preventDefault();
