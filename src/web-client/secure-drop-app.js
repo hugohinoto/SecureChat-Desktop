@@ -533,7 +533,7 @@ async function signOut() {
   try {
     await api("/api/auth/logout", { method:"POST", body:"{}",
       headers:{ "Content-Type":"application/json" } });
-    location.href = "/";
+    location.href = "index.html";
   } catch (failure) {
     notify(errorText(failure));
     ui.logout.disabled = false;
