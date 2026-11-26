@@ -23,7 +23,8 @@
       const result = await window.secureChatDesktop.request(target.pathname + target.search, {
         method,
         body,
-        contentType: sourceHeaders.get("content-type") || undefined
+        contentType: sourceHeaders.get("content-type") || undefined,
+        headers: Object.fromEntries([...sourceHeaders.entries()].filter(([name]) => name.toLowerCase().startsWith("x-secure-drop-")))
       });
       const headers = new Headers({
         "Content-Type": result.contentType || "application/json",
