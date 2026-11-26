@@ -2,6 +2,10 @@
 
 SecureChatのオンライン機能を利用するWindows向けデスクトップクライアントです。通常時はSecureChat Webクライアントをアプリに同梱したローカルRendererで表示し、HTTPS API通信をMain Processが代行します。接続できない場合は同じデザインシステムのオフライン保管庫へ切り替えます。
 
+## v0.5.1
+
+- Fix desktop API connectivity by routing API requests through Electron's network stack, consistent with the startup connectivity probe.
+
 ## v0.5.0
 
 - GitHub Releasesの最新安定版を起動後・6時間ごとに確認し、更新をバックグラウンドでダウンロードします。
@@ -86,6 +90,6 @@ Requirements: Node.js 24 or later and npm.
 
     npm run dist:win
 
-生成物はインストーラーではなく、単体起動できる x64 のポータブル EXE（`SecureChat-Desktop-0.5.0-portable.exe`）です。Node.js、npm、Electron、追加ランタイムを利用者側でインストールする必要はありません。Chromium / ElectronランタイムはEXEに含まれます。EXEをダブルクリックすると一時フォルダーへ展開して起動し、Windowsへのインストール、スタートメニュー登録、レジストリ登録、管理者権限は要求しません。
+生成物はインストーラーではなく、単体起動できる x64 のポータブル EXE（`SecureChat-Desktop-0.5.1-portable.exe`）です。Node.js、npm、Electron、追加ランタイムを利用者側でインストールする必要はありません。Chromium / ElectronランタイムはEXEに含まれます。EXEをダブルクリックすると一時フォルダーへ展開して起動し、Windowsへのインストール、スタートメニュー登録、レジストリ登録、管理者権限は要求しません。
 
 初回起動後は、同じ場所に `portable-data` フォルダーが自動作成されます。別のPCへ移動するときはEXEと `portable-data` フォルダーを一緒にコピーしてください。EXE単体でも起動できますが、`portable-data` を移動しない場合は接続先設定・ログイン状態・ローカル保管庫が引き継がれません。
