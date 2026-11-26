@@ -289,7 +289,6 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
       localWindow.destroy();
       localWindow = null;
     }
-    autoReconnectEnabled = false;
     if (configWindow && !configWindow.isDestroyed()) configWindow.close();
   });
   current.webContents.on("did-fail-load", (_event, code, _description, _validatedURL, isMainFrame) => {
