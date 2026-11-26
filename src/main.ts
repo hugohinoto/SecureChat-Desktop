@@ -150,7 +150,6 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
       headers.set(normalized, value);
     }
   }
-           (request.contentType.startsWith("application/octet-stream") || request.contentType.startsWith("text/plain"))) headers.set("Content-Type", request.contentType);
   const response = await fetch(target, {
     method, headers, body: requestBody == null ? undefined : (requestBody instanceof ArrayBuffer ? Buffer.from(requestBody) : requestBody instanceof Uint8Array ? Buffer.from(requestBody) : requestBody as string),
     redirect: "manual", signal: AbortSignal.timeout(120000)
