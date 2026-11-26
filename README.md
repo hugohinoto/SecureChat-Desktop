@@ -2,7 +2,12 @@
 
 SecureChatのオンライン機能を利用するWindows向けデスクトップクライアントです。通常時はSecureChat Webクライアントをアプリに同梱したローカルRendererで表示し、HTTPS API通信をMain Processが代行します。接続できない場合は同じデザインシステムのオフライン保管庫へ切り替えます。
 
-## v0.4.0
+## v0.5.0
+
+- GitHub Releasesの最新安定版を起動後・6時間ごとに確認し、更新をバックグラウンドでダウンロードします。
+- GitHub Release APIが提示するSHA-256ダイジェストと照合してから更新ファイルを使用します。
+- 更新は再起動時に実行し、起動確認ができなければ旧EXEへロールバックします。
+- `portable-data` はEXEの差し替え対象外です。メニューから手動で更新確認もできます。
 
 - Webサイトをリモート表示する方式から、Webクライアントをアプリに同梱してローカル表示する方式へ変更しました。
 - ログイン・チャット・管理・SecureDropのAPI通信はMain ProcessがHTTPSで代行し、画面遷移やサイト表示に依存しません。
@@ -60,6 +65,12 @@ Windowsポータブル版では、実行ファイルと隣接する `portable-da
 - 保管庫データはAES-256-GCMで認証付き暗号化し、scryptで鍵を導出します。
 - Electronプロファイルのコピーは端末鍵の複製になります。端末の複製・失効はSecureChat側の端末管理方針に従ってください。
 
+## 自動更新
+
+Windowsポータブル版は起動後と6時間ごとにGitHub Releasesの最新安定版を確認し、更新があればバックグラウンドで取得します。ダウンロードしたEXEはGitHub Release APIのSHA-256ダイジェストと照合し、再起動を選ぶまで現在のアプリを変更しません。再起動時は専用PowerShellヘルパーが旧EXEをバックアップして差し替え、新版が画面を正常に読み込んだことを確認できた場合だけバックアップを削除します。75秒以内に起動確認できなければ旧EXEへ戻します。
+
+更新配信は `vX.Y.Z` タグのGitHub Releaseに `SecureChat-Desktop-X.Y.Z-portable.exe` を添付して行います。タグと `package.json` のバージョンは一致させてください。Release APIのSHA-256ダイジェストはダウンロード破損・転送中の改変検出に使いますが、GitHubアカウントやRelease自体が侵害された場合への独立した署名保証ではありません。Windows版は現状コード署名されていないため、SmartScreen警告が表示される場合があります。
+
 ## 開発
 
 Requirements: Node.js 24 or later and npm.
@@ -75,6 +86,6 @@ Requirements: Node.js 24 or later and npm.
 
     npm run dist:win
 
-生成物はインストーラーではなく、単体起動できる x64 のポータブル EXE（`SecureChat-Desktop-0.4.0-portable.exe`）です。Node.js、npm、Electron、追加ランタイムを利用者側でインストールする必要はありません。Chromium / ElectronランタイムはEXEに含まれます。EXEをダブルクリックすると一時フォルダーへ展開して起動し、Windowsへのインストール、スタートメニュー登録、レジストリ登録、管理者権限は要求しません。
+生成物はインストーラーではなく、単体起動できる x64 のポータブル EXE（`SecureChat-Desktop-0.5.0-portable.exe`）です。Node.js、npm、Electron、追加ランタイムを利用者側でインストールする必要はありません。Chromium / ElectronランタイムはEXEに含まれます。EXEをダブルクリックすると一時フォルダーへ展開して起動し、Windowsへのインストール、スタートメニュー登録、レジストリ登録、管理者権限は要求しません。
 
 初回起動後は、同じ場所に `portable-data` フォルダーが自動作成されます。別のPCへ移動するときはEXEと `portable-data` フォルダーを一緒にコピーしてください。EXE単体でも起動できますが、`portable-data` を移動しない場合は接続先設定・ログイン状態・ローカル保管庫が引き継がれません。
