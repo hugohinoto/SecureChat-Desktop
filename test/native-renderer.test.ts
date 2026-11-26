@@ -22,6 +22,9 @@ test("online web client API traffic is bridged through the main process", async 
   assert.match(main, /target\.origin !== origin/);
   assert.match(main, /Origin: origin/);
   assert.match(main, /safeStorage\.encryptString/);
+  assert.match(main, /x-secure-drop-key-envelope/);
+  assert.match(main, /32 \* 1024 \* 1024/);
+  assert.match(bootstrap, /x-secure-drop-/);
   assert.match(main, /safeStorage\.decryptString/);
   assert.match(preload, /api:request/);
   assert.doesNotMatch(preload, /sessionCookie|Cookie/);
