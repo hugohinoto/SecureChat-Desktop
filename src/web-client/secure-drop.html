@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080e19">
+  <meta name="description" content="SecureDrop — 独立した暗号化ファイル転送サービス">
+  <title>SecureDrop — SecureChat</title>
+  <link rel="stylesheet" href="/ui-refresh.css">
+  <link rel="stylesheet" href="/secure-drop-service.css">
+  <script type="module" src="/secure-drop-app.js"></script>
+</head>
+<body class="service-body workspace-service-body">
+  <div class="service-workspace-layout">
+    <aside class="service-workspace-sidebar" aria-label="SecureChatワークスペース">
+      <a class="service-workspace-brand" href="/" aria-label="SecureChat Lab ホーム">
+        <span class="service-workspace-brand-mark" aria-hidden="true">S</span>
+        <span><strong>SecureChat</strong><small>PRIVATE WORKSPACE</small></span>
+      </a>
+      <div class="service-workspace-label">WORKSPACE</div>
+      <div class="service-workspace-card">
+        <span class="service-workspace-card-icon">S</span>
+        <span><strong>SecureChat Lab</strong><small>招待制プライベートスペース</small></span>
+      </div>
+      <nav class="service-workspace-nav" aria-label="ワークスペース">
+        <a href="/" class="service-workspace-nav-link"><span aria-hidden="true">▣</span>チャット</a>
+        <a href="/secure-drop.html" class="service-workspace-nav-link active" aria-current="page"><span aria-hidden="true">⇧</span>SecureDrop</a>
+      </nav>
+      <div class="service-workspace-sidebar-bottom">
+        <div class="service-workspace-user"><span aria-hidden="true">●</span><span id="service-user">セッションを確認中…</span></div>
+        <button id="service-logout" type="button" hidden>ログアウト</button>
+      </div>
+    </aside>
+
+    <div class="service-workspace-main">
+      <header class="service-topbar">
+        <a class="service-back" href="/" aria-label="SecureChat Labへ戻る">← <span>ワークスペース</span></a>
+        <div class="service-account">
+          <span>SECUREDROP</span>
+        </div>
+      </header>
+
+      <main class="service-shell">
+        <section class="service-hero">
+          <div class="service-icon" aria-hidden="true">D</div>
+          <div>
+            <p class="service-eyebrow">WORKSPACE TOOL</p>
+            <h1>SecureDrop</h1>
+            <p>チャットと同じワークスペースで使える、独立した暗号化ファイル転送。</p>
+          </div>
+          <span class="service-status"><i></i> D1暗号化ストレージ</span>
+        </section>
+
+        <section class="service-notice" aria-label="暗号化の説明">
+          ファイルは送信端末内でAES-256-GCM暗号化され、暗号文だけがD1へ保存されます。
+          受信者の署名付き公開鍵と、この端末で別経路照合済みの指紋を確認してから送受信します。
+        </section>
+
+        <nav class="service-view-tabs" id="service-view-tabs" aria-label="SecureDropの画面" hidden>
+          <button type="button" class="active" data-service-target="service-upload-card" aria-selected="true">ファイル送信</button>
+          <button type="button" data-service-target="service-usage-card" aria-selected="false">利用状況</button>
+          <button type="button" data-service-target="service-files-card" aria-selected="false">ファイル一覧</button>
+          <button type="button" data-service-target="service-pending-card" aria-selected="false" hidden>再送信待ち</button>
+        </nav>
+
+        <section class="service-auth-card" id="service-auth" hidden>
+          <h2>ログインが必要です</h2>
+          <p>SecureChat Labでログインしてから、このサービスを開いてください。</p>
+          <a class="service-primary-link" href="/">SecureChat Labでログイン</a>
+        </section>
+
+        <section class="service-auth-card" id="service-key-warning" hidden>
+          <h2>この端末の暗号鍵を確認できません</h2>
+          <p>SecureChat Labに戻り、いつものブラウザー・端末でログインして暗号鍵を準備してください。サイトデータは削除しないでください。</p>
+          <a class="service-secondary-link" href="/">SecureChat Labへ戻る</a>
+        </section>
+
+        <section id="service-content" hidden>
+          <div class="service-grid">
+            <section class="service-card service-upload-card" id="service-upload-card" data-service-view>
+              <div class="service-card-heading">
+                <div><p class="service-eyebrow">SEND A FILE</p><h2>ファイルを送信</h2></div>
+                <span class="service-card-symbol" aria-hidden="true">↑</span>
+              </div>
+              <label class="service-field"><span>送信先（相互確認済み連絡先）</span>
+                <select id="service-recipient" required><option value="">連絡先を読み込み中…</option></select>
+              </label>
+              <div class="service-file-picker">
+                <input id="service-file" type="file" hidden>
+                <button id="service-choose-file" class="service-secondary-button" type="button">ファイルを選択</button>
+                <span id="service-file-name">選択されていません（最大25 MB）</span>
+              </div>
+              <label class="service-priority"><input id="service-priority" type="checkbox">
+                <span><strong>優先送信</strong><small>通常送信の5倍のクレジットを使用し、最大容量まで送信します。</small></span>
+              </label>
+              <button id="service-send" class="service-primary-button" type="button" disabled>暗号化して送信</button>
+              <p class="service-help" id="service-upload-status" aria-live="polite">送信先を選択してください。</p>
+            </section>
+
+            <section class="service-card service-usage-card" id="service-usage-card" data-service-view hidden>
+              <div class="service-card-heading"><div><p class="service-eyebrow">ACCOUNT & STORAGE</p><h2>利用状況</h2></div>
+                <span class="service-card-symbol" aria-hidden="true">◫</span></div>
+              <div class="service-usage-number" id="service-credits">読み込み中…</div>
+              <p class="service-usage-label">今月の残りクレジット</p>
+              <div class="service-meter"><span id="service-meter-fill"></span></div>
+              <p class="service-help" id="service-storage">専用容量を確認しています…</p>
+              <div class="service-limits"><span>専用容量 2.5 GB</span><span>通常送信停止 90%</span><span>最大25 MB / ファイル</span></div>
+            </section>
+          </div>
+
+          <section class="service-card service-files-card" id="service-files-card" data-service-view hidden>
+            <div class="service-card-heading service-files-heading">
+              <div><p class="service-eyebrow">TRANSFER HISTORY</p><h2>ファイル一覧</h2>
+                <p class="service-help">送信済み・受信済みのファイルを連絡先ごとに表示します。各ファイルの最初の3回は無料、4回目以降は暗号化後容量1 MBごとに1クレジット（端数切り上げ）です。</p></div>
+              <button id="service-refresh" class="service-secondary-button" type="button">更新</button>
+            </div>
+            <div id="service-files" class="service-file-list" aria-live="polite"><p class="service-empty">ファイルはありません。</p></div>
+          </section>
+
+          <section class="service-card service-pending-card" id="service-pending-card" data-service-view hidden>
+            <div class="service-card-heading"><div><p class="service-eyebrow">ON THIS DEVICE</p><h2>端末内の再送信待ち</h2></div>
+              <span class="service-card-symbol" aria-hidden="true">↻</span></div>
+            <p class="service-help">送信前に暗号化されたデータをこのブラウザーに一時保存しています。サイトデータの消去や端末故障時は復元できません。</p>
+            <div id="service-pending" class="service-file-list"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div class="service-toast" id="service-toast" role="status" aria-live="polite"></div>
+</body>
+</html>
