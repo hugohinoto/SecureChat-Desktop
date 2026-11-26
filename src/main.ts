@@ -113,7 +113,7 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   if (typeof pathValue !== "string" || pathValue.length > 2048 || !pathValue.startsWith("/api/") ||
       pathValue.includes(String.fromCharCode(92))) throw new Error("DESKTOP_API_PATH_REJECTED");
   if (!requestValue || typeof requestValue !== "object") throw new Error("DESKTOP_API_REQUEST_INVALID");
-  const request = requestValue as { method?: unknown; body?: unknown; contentType?: unknown };
+  const request = requestValue as { method?: unknown; body?: unknown; contentType?: unknown; headers?: unknown };
   const method = typeof request.method === "string" ? request.method.toUpperCase() : "GET";
   if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method)) throw new Error("DESKTOP_API_METHOD_REJECTED");
   const requestBody = request.body;
@@ -121,7 +121,7 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   const bodyIsBytes = requestBody instanceof Uint8Array || requestBody instanceof ArrayBuffer;
   if (requestBody !== undefined && requestBody !== null &&
       (!bodyIsText && !bodyIsBytes ||
-       (bodyIsText ? Buffer.byteLength(requestBody as string, "utf8") : (requestBody instanceof ArrayBuffer ? requestBody.byteLength : (requestBody as Uint8Array).byteLength)) > 16 * 1024 * 1024)) {
+       (bodyIsText ? Buffer.byteLength(requestBody as string, "utf8") : (requestBody instanceof ArrayBuffer ? requestBody.byteLength : (requestBody as Uint8Array).byteLength)) > 32 * 1024 * 1024)) {
     throw new Error("DESKTOP_API_BODY_REJECTED");
   }
   const origin = validateServerUrl(configuredServerUrl || DEFAULT_SERVER_URL);
@@ -135,6 +135,21 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   const headers = new Headers({ Accept: "application/json", Origin: origin });
   if (sessionCookie) headers.set("Cookie", sessionCookie);
   if (request.contentType === "application/json") headers.set("Content-Type", "application/json");
+  else if (typeof request.contentType === "string" && request.contentType.startsWith("application/octet-stream")) headers.set("Content-Type", "application/octet-stream");
+  const allowedDesktopHeaders = new Set([
+    "x-secure-drop-upload-id", "x-secure-drop-original-size", "x-secure-drop-stored-size",
+    "x-secure-drop-payload", "x-secure-drop-recipient-id", "x-secure-drop-key-envelope",
+    "x-secure-drop-priority"
+  ]);
+  if (request.headers !== undefined) {
+    if (!request.headers || typeof request.headers !== "object" || Array.isArray(request.headers)) throw new Error("DESKTOP_API_HEADERS_REJECTED");
+    for (const [name, value] of Object.entries(request.headers as Record<string, unknown>)) {
+      const normalized = name.toLowerCase();
+      if (!allowedDesktopHeaders.has(normalized) || typeof value !== "string" ||
+          value.length > 32768 || /[\\r\\n]/.test(value)) throw new Error("DESKTOP_API_HEADERS_REJECTED");
+      headers.set(normalized, value);
+    }
+  }
   else if (typeof request.contentType === "string" && request.contentType.length <= 128 &&
            (request.contentType.startsWith("application/octet-stream") || request.contentType.startsWith("text/plain"))) headers.set("Content-Type", request.contentType);
   const response = await fetch(target, {
@@ -161,11 +176,11 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   const contentType = response.headers.get("content-type") || "application/json";
   if (contentType.startsWith("application/octet-stream")) {
     const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > 16 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
+    if (bytes.byteLength > 32 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
     return { status: response.status, body: bytes, contentType };
   }
   const body = await response.text();
-  if (Buffer.byteLength(body, "utf8") > 16 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
+  if (Buffer.byteLength(body, "utf8") > 32 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
   return { status: response.status, body, contentType };
 }
 function isTrustedConfigSender(event: Electron.IpcMainInvokeEvent): boolean {
