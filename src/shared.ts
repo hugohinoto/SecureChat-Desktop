@@ -7,5 +7,7 @@ export interface DesktopApi {
   getSnapshot(): Promise<VaultData>; createConversation(title: string): Promise<Conversation>;
   addLocalMessage(conversationId: string, text: string): Promise<Message>;
   getVaultStatus(): Promise<{exists: boolean; unlocked: boolean}>;
+  getConnectionState(): Promise<"online" | "offline" | "reconnecting">;
+  onConnectionState(callback: (state: "online" | "offline" | "reconnecting") => void): void;
 }
 declare global { interface Window { secureChat: DesktopApi; } }

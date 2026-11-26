@@ -5,6 +5,8 @@ const api:DesktopApi={
   lock:()=>ipcRenderer.invoke("vault:lock"),getSnapshot:()=>ipcRenderer.invoke("vault:snapshot"),
   createConversation:t=>ipcRenderer.invoke("conversation:create",t),
   addLocalMessage:(id,t)=>ipcRenderer.invoke("message:add-local",id,t),
-  getVaultStatus:()=>ipcRenderer.invoke("vault:status")
+  getVaultStatus:()=>ipcRenderer.invoke("vault:status"),
+  getConnectionState:()=>ipcRenderer.invoke("connection:status"),
+  onConnectionState:callback=>ipcRenderer.on("connection:state",(_event,state)=>callback(state))
 };
 contextBridge.exposeInMainWorld("secureChat",api);
