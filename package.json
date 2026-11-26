@@ -1,6 +1,6 @@
 {
   "name": "securechat-desktop",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "SecureChat desktop client with a bundled native renderer, verified portable updates and encrypted offline vault",
   "main": "dist/src/main.js",
