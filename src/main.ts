@@ -171,6 +171,29 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
   void current.loadURL(origin);
 }
 
+async function checkForServerAndReconnect(): Promise<void> {
+  if (!autoReconnectEnabled || reconnectInFlight || !localWindow || localWindow.isDestroyed() || (remoteWindow && !remoteWindow.isDestroyed())) return;
+  reconnectInFlight = true;
+  try {
+    const serverUrl = configuredServerUrl || await readServerConfig() || DEFAULT_SERVER_URL;
+    const origin = validateServerUrl(serverUrl);
+    // A response from the configured HTTPS origin confirms reachability; failed probes leave the local vault untouched.
+    const response = await net.fetch(origin, { method: "HEAD", redirect: "manual", signal: AbortSignal.timeout(5000) });
+    if (response.status >= 200 && response.status < 500 && response.url.startsWith(origin)) {
+      createRemoteWindow(origin, true);
+    }
+  } catch {
+    // Keep the offline vault available and retry on the next interval.
+  } finally {
+    reconnectInFlight = false;
+  }
+}
+function startAutoReconnectMonitor(): void {
+  if (reconnectTimer) clearInterval(reconnectTimer);
+  reconnectTimer = setInterval(() => { void checkForServerAndReconnect(); }, 15000);
+  reconnectTimer.unref();
+}
+
 function registerIpc(): void {
   ipcMain.handle("config:get", async (event) => {
     if (!isTrustedConfigSender(event)) throw new Error("IPC_SENDER_REJECTED");
