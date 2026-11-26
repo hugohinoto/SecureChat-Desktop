@@ -331,8 +331,8 @@ async function checkForServerAndReconnect(): Promise<void> {
       reachable = response.status >= 200 && response.status < 500 && response.url.startsWith(origin);
     } catch { reachable = false; }
 
-    const onlineWindow = remoteWindow && !remoteWindow.isDestroyed();
-    const offlineWindow = localWindow && !localWindow.isDestroyed();
+    const onlineWindow = remoteWindow && !remoteWindow.isDestroyed() ? remoteWindow : null;
+    const offlineWindow = localWindow && !localWindow.isDestroyed() ? localWindow : null;
     if (onlineWindow && !reachable) {
       setConnectionState("offline");
       onlineWindow.destroy();
