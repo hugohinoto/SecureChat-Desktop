@@ -210,7 +210,6 @@ async function checkForServerAndReconnect(): Promise<void> {
         autoReconnectEnabled && localWindow && !localWindow.isDestroyed() &&
         (!remoteWindow || remoteWindow.isDestroyed())) {
       setConnectionState("reconnecting");
-      setConnectionState("reconnecting");
       createRemoteWindow(origin, true);
     }
   } catch {
