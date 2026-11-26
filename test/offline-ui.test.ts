@@ -39,7 +39,7 @@ test("offline fallback retries the server and preserves the vault until API reac
   assert.match(main, /setInterval\(\(\) => \{ void checkForServerAndReconnect\(\); \}, 15000\)/);
   assert.match(main, /AbortSignal\.timeout\(8000\)/);
   assert.match(reconnect, /createRemoteWindow\(origin, true\)/);
-  assert.doesNotMatch(remoteWindow, /localWindow\.destroy\(\)/);
+  assert.doesNotMatch(remoteWindowLoad, /localWindow\.destroy\(\)/);
   assert.match(reconnect, /if \(onlineWindow && reachable\)[\s\S]*if \(offlineWindow\)[\s\S]*vault\.lock\(\);\s+offlineWindow\.destroy\(\)/);
   assert.match(main, /createLocalWindow\(true\)/);
 });
