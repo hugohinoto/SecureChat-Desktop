@@ -93,3 +93,8 @@ Requirements: Node.js 24 or later and npm.
 生成物はインストーラーではなく、単体起動できる x64 のポータブル EXE（`SecureChat-Desktop-0.5.1-portable.exe`）です。Node.js、npm、Electron、追加ランタイムを利用者側でインストールする必要はありません。Chromium / ElectronランタイムはEXEに含まれます。EXEをダブルクリックすると一時フォルダーへ展開して起動し、Windowsへのインストール、スタートメニュー登録、レジストリ登録、管理者権限は要求しません。
 
 初回起動後は、同じ場所に `portable-data` フォルダーが自動作成されます。別のPCへ移動するときはEXEと `portable-data` フォルダーを一緒にコピーしてください。EXE単体でも起動できますが、`portable-data` を移動しない場合は接続先設定・ログイン状態・ローカル保管庫が引き継がれません。
+
+
+## V2自動鍵交換・耐量子暗号のロードマップ
+
+SecureChat V2の初回鍵交換・定期更新・端末追加の自動化と耐量子暗号対応は、現在設計段階です。デスクトップ版もWeb版と同一のレビュー済み暗号実装を共有する方針です。現行のMatrix Rust/WASM Olm/Megolmは古典暗号であり、PQXDH・ML-KEM・耐量子Ratchetはまだ実装・有効化されていません。詳細とリリース条件は[設計書](https://github.com/hugohinoto/SecureChat/blob/main/docs/post-quantum-key-exchange-v2.md)を参照してください。
