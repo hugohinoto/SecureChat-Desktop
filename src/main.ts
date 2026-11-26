@@ -161,7 +161,7 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   const requestBodyBuffer = requestBody == null ? null
     : Buffer.isBuffer(requestBody) ? requestBody
     : Buffer.from(requestBody as string | Uint8Array);
-  const response = await new Promise<{ status: number; headers: Record<string, string[]>; body: Buffer }>((resolveResponse, rejectResponse) => {
+  const response = await new Promise<{ status: number; headers: Record<string, string | string[]>; body: Buffer }>((resolveResponse, rejectResponse) => {
     const outgoing = net.request({
       method,
       url: target.toString(),
