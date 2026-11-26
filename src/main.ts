@@ -109,9 +109,9 @@ function isTrustedRemoteSender(event: Electron.IpcMainInvokeEvent): boolean {
   return !!remoteWindow && event.sender === remoteWindow.webContents &&
     frameUrl.startsWith("file://") && frameUrl.includes("/renderer/web-client/");
 }
-async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Promise<{ status: number; body: string; contentType: string }> {
+async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Promise<{ status: number; body: string | Uint8Array; contentType: string }> {
   if (typeof pathValue !== "string" || pathValue.length > 2048 || !pathValue.startsWith("/api/") ||
-      pathValue.includes("\\\\")) throw new Error("DESKTOP_API_PATH_REJECTED");
+      pathValue.includes(String.fromCharCode(92))) throw new Error("DESKTOP_API_PATH_REJECTED");
   if (!requestValue || typeof requestValue !== "object") throw new Error("DESKTOP_API_REQUEST_INVALID");
   const request = requestValue as { method?: unknown; body?: unknown; contentType?: unknown };
   const method = typeof request.method === "string" ? request.method.toUpperCase() : "GET";
@@ -144,11 +144,15 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
   const responseHeaders = response.headers as Headers & { getSetCookie?: () => string[] };
   const setCookies = responseHeaders.getSetCookie?.() || [response.headers.get("set-cookie") || ""];
   for (const line of setCookies) {
-    const match = line.match(/(?:^|,\\s*)(__Host-sc_session|sc_session)=([^;,]*)/);
-    if (!match) continue;
-    if (!match[2]) await clearStoredSession();
+    const pair = line.split(";", 1)[0].trim();
+    const separator = pair.indexOf("=");
+    if (separator < 0) continue;
+    const name = pair.slice(0, separator);
+    const value = pair.slice(separator + 1);
+    if (name !== "__Host-sc_session" && name !== "sc_session") continue;
+    if (!value) await clearStoredSession();
     else {
-      sessionCookie = match[1] + "=" + match[2];
+      sessionCookie = name + "=" + value;
       sessionCookieOrigin = origin;
       await persistSession();
     }
