@@ -5,7 +5,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 const REPOSITORY = "hugohinoto/SecureChat-Desktop";
 const MAX_RELEASE_BYTES = 250 * 1024 * 1024;
-const VERSION_PATTERN = /^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$/;
+const VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 export type ReleaseAsset = { name?: unknown; browser_download_url?: unknown; digest?: unknown };
 export type ReleaseInfo = { tag_name?: unknown; draft?: unknown; prerelease?: unknown; html_url?: unknown; assets?: unknown };
