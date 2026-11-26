@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain, Menu, net, Notification, safeStorage, session, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, Notification, safeStorage, session, shell } from "electron";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkdir, readFile, rename, writeFile, rm } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { validateServerUrl } from "./server-url";
 import { VaultStore } from "./vault";
+import { checkLatestUpdate, confirmPendingUpdate, downloadAndStageUpdate, launchStagedUpdate, type AvailableUpdate } from "./updater";
 
 type ServerConfig = { serverUrl: string };
 const DEFAULT_SERVER_URL = "https://securechat.hugohinoto.workers.dev";
@@ -23,6 +24,8 @@ let reconnectInFlight = false;
 let reconnectTimer: NodeJS.Timeout | null = null;
 type ConnectionState = "unknown" | "online" | "offline" | "reconnecting";
 let connectionState: ConnectionState = "unknown";
+let updateCheckInFlight = false;
+let stagedUpdate: AvailableUpdate | null = null;
 
 function setConnectionState(next: Exclude<ConnectionState, "unknown">): void {
   if (connectionState === next) return;
@@ -263,6 +266,7 @@ function createLocalWindow(enableAutoReconnect = false): void {
   });
   current.webContents.once("did-finish-load", () => {
     if (connectionState !== "unknown") current.webContents.send("connection:state", connectionState);
+    void confirmPendingUpdate(app.getPath("userData"));
   });
   current.once("ready-to-show", () => { current.show(); closeSplash(); setConnectionState("offline"); });
   current.on("closed", () => { if (localWindow === current) localWindow = null; });
@@ -309,6 +313,7 @@ function createRemoteWindow(serverUrl: string, keepOfflineUntilReady = false): v
     if (current !== remoteWindow || current.isDestroyed()) return;
     current.show(); closeSplash();
     setConnectionState("online");
+    void confirmPendingUpdate(app.getPath("userData"));
     autoReconnectEnabled = true;
     if (keepOfflineUntilReady && localWindow && !localWindow.isDestroyed()) {
       vault.lock();
@@ -420,6 +425,44 @@ function registerIpc(): void {
     return vault.addLocalMessage(id, message);
   });
 }
+async function checkDesktopUpdate(manual: boolean): Promise<void> {
+  if (updateCheckInFlight) return;
+  updateCheckInFlight = true;
+  try {
+    const update = stagedUpdate || await checkLatestUpdate(app.getVersion());
+    if (!update) {
+      if (manual) await dialog.showMessageBox({ type: "info", title: "SecureChat Desktop", message: "現在のバージョンは最新版です。" });
+      return;
+    }
+    if (!stagedUpdate) {
+      await downloadAndStageUpdate(update, app.getPath("userData"));
+      stagedUpdate = update;
+    }
+    const choice = await dialog.showMessageBox({
+      type: "info", title: "アップデートをダウンロードしました",
+      message: `SecureChat Desktop ${update.version} をインストールできます。`,
+      detail: "アプリを再起動すると更新します。portable-data 内の設定・ログイン状態・オフライン保管庫は更新対象外です。",
+      buttons: ["今すぐ再起動して更新", "後で"],
+      defaultId: 0, cancelId: 1, noLink: true
+    });
+    if (choice.response === 0) {
+      await launchStagedUpdate(update.version, app.getPath("userData"));
+      app.quit();
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "UNKNOWN";
+    if (manual) await dialog.showMessageBox({ type: "error", title: "更新を確認できませんでした", message: "更新の確認または検証に失敗しました。現在のバージョンで引き続き利用できます。", detail: message });
+  } finally {
+    updateCheckInFlight = false;
+  }
+}
+function startUpdateMonitor(): void {
+  const initial = setTimeout(() => { void checkDesktopUpdate(false); }, 12000);
+  initial.unref();
+  const interval = setInterval(() => { void checkDesktopUpdate(false); }, 6 * 60 * 60 * 1000);
+  interval.unref();
+}
+
 function installApplicationMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     { label: "SecureChat", submenu: [
@@ -427,6 +470,8 @@ function installApplicationMenu(): void {
       { label: "オフライン保管庫を開く", click: () => createLocalWindow(false) },
       { label: "サーバー接続先を変更…", click: () => createConfigWindow() },
       { label: "再接続", click: () => { if (configuredServerUrl) createRemoteWindow(configuredServerUrl); } },
+      { type: "separator" },
+      { label: "アプリの更新を確認…", click: () => { void checkDesktopUpdate(true); } },
       { type: "separator" }, { role: "quit", label: "終了" }
     ] },
     { label: "編集", submenu: [{ role: "undo" }, { role: "redo" }, { type: "separator" }, { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" }] },
@@ -460,6 +505,7 @@ app.whenReady().then(async () => {
     closeSplash(); createLocalWindow(true);
   }
   startAutoReconnectMonitor();
+  startUpdateMonitor();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       if (configuredServerUrl) createRemoteWindow(configuredServerUrl);
