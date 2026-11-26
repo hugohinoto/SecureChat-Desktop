@@ -165,7 +165,7 @@ $("#run-security-check").addEventListener("click",runSecurityCheck);
 $("#export-security-csv").addEventListener("click",exportSecurityCsv);
 $("#refresh-reports").addEventListener("click",()=>loadBugReports().catch(e=>message(e.message,"error")));
 $("#refresh-logs").addEventListener("click",()=>loadLogs().catch(e=>message(e.message,"error")));
-$("#logout").addEventListener("click",async()=>{try{await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin",headers:{"Accept":"application/json"}});}finally{location.href="/";}});
+$("#logout").addEventListener("click",async()=>{try{await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin",headers:{"Accept":"application/json"}});}finally{location.href = "index.html";}});
 function clearSensitiveConsole(){
  currentAdmin="";lastSecurityCheck=null;
  consoleRoot.hidden=true;notice.hidden=false;
