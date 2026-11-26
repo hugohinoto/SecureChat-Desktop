@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>SecureChat バグ報告</title>
+<link rel="stylesheet" href="/admin.css">
+<script src="/bug-report.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">SECURECHAT <span>FEEDBACK</span></a>
+  <div class="top-actions"><a href="/">チャットへ戻る</a></div>
+</header>
+<main class="layout">
+  <section class="intro"><div><p class="eyebrow">HELP US IMPROVE</p><h1>バグ・不具合の報告</h1><p>報告内容は暗号化して保存し、管理者と報告者本人だけが確認できます。</p></div></section>
+  <div id="report-notice" class="notice" role="status">ログイン状態を確認しています…</div>
+  <nav class="report-view-tabs" aria-label="報告メニュー"><button type="button" class="active" data-report-target="report-panel" aria-selected="true">新しい報告</button><button type="button" data-report-target="my-reports-panel" aria-selected="false">送信済みの報告</button></nav>
+  <section id="report-panel" class="panel" data-report-view hidden>
+    <form id="report-form" class="announcement-form">
+      <label>報告の種類
+        <select id="report-category">
+          <option value="bug">不具合・バグ</option>
+          <option value="security">セキュリティ上の問題</option>
+          <option value="other">その他の改善提案</option>
+        </select>
+      </label>
+      <label>タイトル<input id="report-title" maxlength="100" required placeholder="例：メッセージ送信後に表示が更新されない"></label>
+      <label>詳しい内容<textarea id="report-description" rows="5" maxlength="5000" required placeholder="発生した問題や状況を入力してください"></textarea></label>
+      <details class="report-advanced"><summary>任意の追加情報を入力</summary>
+        <div class="report-advanced-grid">
+          <label>再現手順（任意）<textarea id="report-steps" rows="2" maxlength="2500" placeholder="1. …&#10;2. …"></textarea></label>
+          <label>期待した動作（任意）<textarea id="report-expected" rows="2" maxlength="1500"></textarea></label>
+          <label>実際の動作（任意）<textarea id="report-actual" rows="2" maxlength="1500"></textarea></label>
+        </div>
+      </details>
+      <p class="muted">パスワード、招待コード、ワンタイムコード、秘密鍵、会話本文などの機密情報は入力しないでください。送信は1 IPあたり15分に3回までです。</p>
+      <button class="primary" id="report-submit" type="submit">暗号化して送信</button>
+    </form>
+  </section>
+  <section id="my-reports-panel" class="panel" data-report-view hidden>
+    <div class="panel-heading"><div><p class="eyebrow">MY REPORTS</p><h2>送信した報告・管理者からの返信</h2></div><button id="refresh-my-reports" class="secondary" type="button">更新</button></div>
+    <div id="my-reports" class="item-list"></div>
+  </section>
+</main>
+</body>
+</html>
