@@ -18,11 +18,14 @@ test("online web client API traffic is bridged through the main process", async 
   assert.match(bootstrap, /secureChatDesktop\.request/);
   assert.match(bootstrap, /body instanceof Blob/);
   assert.match(main, /ipcMain\.handle\("api:request"/);
-  assert.match(main, /const response = await net\.fetch\(target\.toString\(\),/);
+  assert.match(main, /const outgoing = net\.request\(/);
+  assert.match(main, /outgoing\.setHeader\(name, value\)/);
+  assert.match(main, /useSessionCookies: false/);
+  assert.match(main, /outgoing\.on\("response"/);
   assert.match(main, /pathValue\.startsWith\("\/api\/"\)/);
   assert.match(main, /target\.origin !== origin/);
   assert.match(main, /Origin: origin/);
-  assert.match(main, /headers: Object\.fromEntries\(headers\.entries\(\)\)/);
+  assert.match(main, /const requestHeaders = Object\.fromEntries\(headers\.entries\(\)\)/);
   assert.match(main, /safeStorage\.encryptString/);
   assert.match(main, /isWithinBundledDirectory/);
   assert.match(main, /isExactBundledFile/);

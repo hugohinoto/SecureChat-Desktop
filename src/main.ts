@@ -153,14 +153,74 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
       headers.set(normalized, value);
     }
   }
-  // Use Electron's network stack consistently with the connectivity probe. This
-  // honors the app's proxy/TLS configuration instead of Node/Undici's separate stack.
-  const response = await net.fetch(target.toString(), {
-    method, headers: Object.fromEntries(headers.entries()), body: requestBody == null ? undefined : (requestBody instanceof ArrayBuffer ? Buffer.from(requestBody) : requestBody instanceof Uint8Array ? Buffer.from(requestBody) : requestBody as string),
-    redirect: "manual", signal: AbortSignal.timeout(120000)
+  // Use ClientRequest rather than Fetch here. The API requires an explicit
+  // Origin header for state-changing requests and a manually persisted HttpOnly
+  // session cookie. Chromium Fetch treats these as forbidden request headers;
+  // ClientRequest is Electron's Chromium-backed API that permits setting them.
+  const requestHeaders = Object.fromEntries(headers.entries());
+  const requestBodyBuffer = requestBody == null ? null
+    : Buffer.isBuffer(requestBody) ? requestBody
+    : Buffer.from(requestBody as string | Uint8Array);
+  const response = await new Promise<{ status: number; headers: Record<string, string | string[]>; body: Buffer }>((resolveResponse, rejectResponse) => {
+    const outgoing = net.request({
+      method,
+      url: target.toString(),
+      redirect: "manual",
+      useSessionCookies: false
+    });
+    let settled = false;
+    const finishError = (error: Error): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      rejectResponse(error);
+    };
+    const timeout = setTimeout(() => {
+      outgoing.abort();
+      finishError(new Error("DESKTOP_API_TIMEOUT"));
+    }, 120000);
+    outgoing.on("error", finishError);
+    outgoing.on("response", incoming => {
+      const chunks: Buffer[] = [];
+      let totalBytes = 0;
+      let responseTooLarge = false;
+      incoming.on("data", chunk => {
+        if (settled || responseTooLarge) return;
+        const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        totalBytes += bytes.byteLength;
+        if (totalBytes > 32 * 1024 * 1024) {
+          responseTooLarge = true;
+          outgoing.abort();
+          finishError(new Error("DESKTOP_API_RESPONSE_TOO_LARGE"));
+          return;
+        }
+        chunks.push(bytes);
+      });
+      incoming.on("error", finishError);
+      incoming.on("aborted", () => finishError(new Error("DESKTOP_API_RESPONSE_ABORTED")));
+      incoming.on("end", () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        resolveResponse({
+          status: incoming.statusCode || 0,
+          headers: incoming.headers,
+          body: Buffer.concat(chunks)
+        });
+      });
+    });
+    try {
+      for (const [name, value] of Object.entries(requestHeaders)) outgoing.setHeader(name, value);
+      if (requestBodyBuffer) outgoing.write(requestBodyBuffer);
+      outgoing.end();
+    } catch (error) {
+      outgoing.abort();
+      finishError(error instanceof Error ? error : new Error("DESKTOP_API_REQUEST_FAILED"));
+    }
   });
-  const responseHeaders = response.headers as Headers & { getSetCookie?: () => string[] };
-  const setCookies = responseHeaders.getSetCookie?.() || [response.headers.get("set-cookie") || ""];
+  const rawSetCookies = response.headers["set-cookie"];
+  const setCookies = Array.isArray(rawSetCookies) ? rawSetCookies
+    : typeof rawSetCookies === "string" ? [rawSetCookies] : [];
   for (const line of setCookies) {
     const pair = line.split(";", 1)[0].trim();
     const separator = pair.indexOf("=");
@@ -175,16 +235,13 @@ async function requestDesktopApi(pathValue: unknown, requestValue: unknown): Pro
       await persistSession();
     }
   }
-  if (target.pathname === "/api/auth/logout" && response.ok) await clearStoredSession();
-  const contentType = response.headers.get("content-type") || "application/json";
+  if (target.pathname === "/api/auth/logout" && response.status >= 200 && response.status < 300) await clearStoredSession();
+  const rawContentType = response.headers["content-type"];
+  const contentType = (Array.isArray(rawContentType) ? rawContentType[0] : rawContentType) || "application/json";
   if (contentType.startsWith("application/octet-stream")) {
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > 32 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
-    return { status: response.status, body: bytes, contentType };
+    return { status: response.status, body: new Uint8Array(response.body), contentType };
   }
-  const body = await response.text();
-  if (Buffer.byteLength(body, "utf8") > 32 * 1024 * 1024) throw new Error("DESKTOP_API_RESPONSE_TOO_LARGE");
-  return { status: response.status, body, contentType };
+  return { status: response.status, body: response.body.toString("utf8"), contentType };
 }
 function isWithinBundledDirectory(urlValue: string, directory: string): boolean {
   try {
