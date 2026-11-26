@@ -13,7 +13,7 @@ fs.cpSync(source, target, { recursive: true });
 fs.mkdirSync(webTarget, { recursive: true });
 fs.cpSync(webSource, webTarget, { recursive: true });
 
-const desktopCsp = "default-src 'self' file:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'";
+const desktopCsp = "default-src 'self' file:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' data:; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'";
 for (const name of fs.readdirSync(webTarget).filter(name => name.endsWith(".html"))) {
   const file = path.join(webTarget, name);
   let html = fs.readFileSync(file, "utf8");
@@ -50,9 +50,8 @@ esbuild.buildSync({
   format: "esm",
   target: ["es2022"],
   conditions: ["browser"],
-  loader: { ".wasm": "file" },
+  loader: { ".wasm": "dataurl" },
   assetNames: "crypto/[name]-[hash]",
-  publicPath: "./",
   legalComments: "none",
   logLevel: "info"
 });
