@@ -87,9 +87,6 @@ export async function downloadAndStageUpdate(update: AvailableUpdate, userDataPa
   await mkdir(userDataPath, { recursive: true });
   await rm(staged, { force: true });
   await writeFile(staged, bytes, { flag: "wx", mode: 0o700 });
-  await rm(marker, { force: true });
-  await writeFile(pending, JSON.stringify({ version: update.version, markerPath: marker }), { mode: 0o600 });
-
   return { helperPath: staged };
 }
 
@@ -101,6 +98,9 @@ export async function launchStagedUpdate(version: string, userDataPath: string):
   const backup = executable + ".securechat-rollback.exe";
   const marker = join(userDataPath, `update-healthy-${version}.flag`);
   const pending = join(userDataPath, "pending-update.json");
+  await mkdir(userDataPath, { recursive: true });
+  await rm(marker, { force: true });
+  await writeFile(pending, JSON.stringify({ version, markerPath: marker }), { mode: 0o600 });
   const script = [
     "$ErrorActionPreference = 'Stop'",
     `$exe = ${toPowerShellLiteral(executable)}`,
@@ -137,7 +137,7 @@ export async function launchStagedUpdate(version: string, userDataPath: string):
     "}",
     "Remove-Item -LiteralPath $stage -Force -ErrorAction SilentlyContinue",
     "Remove-Item -LiteralPath $pending -Force -ErrorAction SilentlyContinue"
-  ].join("\\r\\n");
+  ].join("\r\n");
   const encoded = Buffer.from(script, "utf16le").toString("base64");
   const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded], {
     detached: true, stdio: "ignore", windowsHide: true
