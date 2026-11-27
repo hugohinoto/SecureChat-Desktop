@@ -358,7 +358,9 @@ async function confirmPeerFingerprint(peerUserId,peer) {
   return true;
 }
 async function isPeerIdentityTrustedForAutomaticCrypto(peerUserId) {
-  // The coordinator only invokes this callback for mutual OTP contacts.
+  // Automatic TOFU is allowed only after the contact's mutual OTP verification.
+  // The root signing key is pinned once and never silently replaced.
+  if (!await isOtpVerifiedContact(peerUserId)) return false;
 
   const peer = await api("/api/keys/" + encodeURIComponent(peerUserId));
   if (!peer.identitySigningPublicKey || !peer.identityKeySignature) {
@@ -374,28 +376,32 @@ async function isPeerIdentityTrustedForAutomaticCrypto(peerUserId) {
   const ownRecord = await storedIdentity(currentUser.userId);
   const peerPins = { ...(ownRecord?.peerPins || {}) };
   const verifiedPeerPins = { ...(ownRecord?.verifiedPeerPins || {}) };
-  if (peerPins[peerUserId] && peerPins[peerUserId] !== peer.identitySigningPublicKey) {
+  const existingPins = [peerPins[peerUserId], verifiedPeerPins[peerUserId]].filter(Boolean);
+  if (existingPins.some(pin => pin !== peer.identitySigningPublicKey)) {
     if (activeConversation?.peerUserId === peerUserId) {
-      await showPeerKeyChangeVerification(peerUserId, peer, peerPins[peerUserId]);
+      await showPeerKeyChangeVerification(peerUserId, peer, existingPins[0]);
     }
     throw appError("IDENTITY_SIGNING_KEY_CHANGED", "相手の署名鍵変更を検出しました。別経路で指紋を確認するまで鍵交換を停止しています。");
   }
-  if (!peerPins[peerUserId]) {
-    peerPins[peerUserId] = peer.identitySigningPublicKey;
-    await saveIdentity(currentUser.userId, { ...ownRecord, peerPins });
-  }
 
-  const trusted = verifiedPeerPins[peerUserId] === peer.identitySigningPublicKey;
+  // Mutual OTP verification authenticates the contact relationship. On the
+  // first valid signed key, pin it locally (TOFU); do not prompt for a second
+  // manual fingerprint exchange. Any later key change remains a hard stop.
+  const changed = !peerPins[peerUserId] || !verifiedPeerPins[peerUserId];
+  peerPins[peerUserId] = peer.identitySigningPublicKey;
+  verifiedPeerPins[peerUserId] = peer.identitySigningPublicKey;
+  if (changed) await saveIdentity(currentUser.userId, { ...ownRecord, peerPins, verifiedPeerPins });
+
   if (activeConversation?.peerUserId === peerUserId) {
     activePeerSigningKey = peer.identitySigningPublicKey;
-    activePeerFingerprintVerified = trusted;
+    activePeerFingerprintVerified = true;
     const [ownFingerprint, peerFingerprint] = await Promise.all([
       publicKeyFingerprint(identitySigningPublicKey),
       publicKeyFingerprint(peer.identitySigningPublicKey)
     ]);
     renderPeerFingerprintPanel(peerUserId, ownFingerprint, peerFingerprint, peer);
   }
-  return trusted;
+  return true;
 }
 
 async function runAutomaticCryptoMaintenance() {
@@ -431,12 +437,12 @@ async function runAutomaticCryptoMaintenance() {
       } else {
         cryptoV2StatusMessage = active.mode.approvedByMe
           ? "この端末のV2移行準備は完了しました。相手側の準備を自動で待機しています。"
-          : "本人確認済みの連絡先についてV2鍵交換を自動で準備しています。";
+          : "相互OTP確認済みの連絡先について、初回の端末鍵登録を自動で準備しています。";
       }
       updateCryptoV2Controls();
       updateSend();
     } else if (active?.status === "identity-unverified" && activeConversation) {
-      cryptoV2StatusMessage = "指紋の別経路確認が完了するまで、この相手との自動鍵交換を保留しています。";
+      cryptoV2StatusMessage = "相互OTP確認または署名付きアカウント鍵の検証が完了するまで、自動鍵交換を保留しています。";
       updateCryptoV2Controls();
     }
     return outcomes;
@@ -1127,7 +1133,9 @@ async function signIn(user,password=null) {
   });
   refreshTimer=setInterval(()=>{
     const foreground=document.visibilityState==="visible" && document.hasFocus();
-    if(foreground && ++cryptoMaintenanceTick % 60 === 0) {
+    // Keep device inbox and signed one-time-key inventory fresh while the
+    // desktop app is running, including when its window is minimized.
+    if(++cryptoMaintenanceTick % 60 === 0) {
       runAutomaticCryptoMaintenance().catch(error => {
         console.warn("SecureChat automatic crypto maintenance failed:", error?.code || "CRYPTO_MAINTENANCE_ERROR");
       });

@@ -9,13 +9,17 @@ const crypto = readFileSync(join(__dirname, "../src/renderer/web-client/crypto-v
 
 test("desktop automatic key exchange runs after sign-in and during foreground maintenance", () => {
   assert.match(app, /void runAutomaticCryptoMaintenance\(\)/);
-  assert.match(app, /\+\+cryptoMaintenanceTick % 60 === 0/);
+  assert.match(app, /if\(\+\+cryptoMaintenanceTick % 60 === 0\)/);
+  assert.match(app, /including when its window is minimized/);
   assert.match(app, /document\.addEventListener\("visibilitychange"/);
   assert.match(app, /window\.addEventListener\("focus"/);
 });
 
-test("desktop automation retains the out-of-band fingerprint gate", () => {
-  assert.match(app, /verifiedPeerPins\[peerUserId\] === peer\.identitySigningPublicKey/);
+test("desktop automatically pins a peer root key only after mutual OTP and rejects key changes", () => {
+  assert.match(app, /if \(!await isOtpVerifiedContact\(peerUserId\)\) return false;/);
+  assert.match(app, /verifiedPeerPins\[peerUserId\] = peer\.identitySigningPublicKey/);
+  assert.match(app, /existingPins\.some\(pin => pin !== peer\.identitySigningPublicKey\)/);
+  assert.match(app, /activePeerFingerprintVerified = true/);
   assert.match(app, /if\(!cryptoV2Ready \|\| !cryptoV2Module \|\| !conversation \|\|\s*!cryptoV2Required \|\| !activePeerFingerprintVerified \|\| activeProtocolVersion===2\) return;/);
   assert.match(automation, /if \(!await isPeerTrusted\(peerUserId\)\)/);
 });
