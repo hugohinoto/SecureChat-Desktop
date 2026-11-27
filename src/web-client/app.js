@@ -1434,6 +1434,11 @@ async function selectConversation(c) {
   updateSend();
   try {
     await deriveKey(c.id,c.peer_user_id);
+    // A conversation created after sign-in was absent from the initial
+    // maintenance pass. Synchronize devices and exchange keys before sending.
+    if(cryptoV2Required && cryptoV2Ready) {
+      await runAutomaticCryptoMaintenance();
+    }
     await refreshCryptoConversationMode();
     await maybeAutoApproveCryptoV2ForActiveConversation();
     if(activeProtocolVersion===2) {
@@ -1504,13 +1509,33 @@ async function sendMessage() {
   if(busy||!activeConversation)return;
   const text=el.input.value.trim();if(!text)return;
   if(Array.from(text).length>MAX_MESSAGE_LENGTH){showError(appError("MESSAGE_LENGTH_EXCEEDED","メッセージは2000文字以内にしてください。"));return;}
-  if(activeProtocolVersion===2 && !cryptoV2Ready) {
-    showError(appError("CRYPTO_V2_DEVICE_NOT_INITIALIZED","この端末のv2暗号鍵が準備できていません。"));
-    return;
-  }
   busy=true;updateSend();
   try {
-    if(activeProtocolVersion===2) {
+    if(cryptoV2Required) {
+      if(!cryptoV2Ready || !cryptoV2Module) {
+        throw appError("CRYPTO_V2_DEVICE_NOT_INITIALIZED","この端末のv2暗号鍵を初期化できていません。再読み込み後も続く場合は端末登録状態を確認してください。");
+      }
+
+      // Re-read the authoritative mode before sending. The peer may have
+      // completed the upgrade in another app session.
+      await refreshCryptoConversationMode();
+      if(activeProtocolVersion!==2) {
+        await runAutomaticCryptoMaintenance();
+        await refreshCryptoConversationMode();
+        await maybeAutoApproveCryptoV2ForActiveConversation();
+        await refreshCryptoConversationMode();
+      }
+      if(activeProtocolVersion!==2) {
+        const message = activeCryptoMode.approvedByMe && !activeCryptoMode.approvedByPeer
+          ? "この端末のv2準備は完了しています。相手側でSecureChatを開き、端末登録と連絡先の本人確認を完了してください。"
+          : activeCryptoMode.approvedByPeer
+            ? "相手側の準備は完了しています。この端末の端末登録と連絡先の本人確認を完了してください。"
+            : "v2移行には双方の端末登録と、相互OTP確認済み連絡先の本人確認が必要です。セキュリティ欄の指紋確認を完了してください。";
+        cryptoV2StatusMessage=message;
+        updateCryptoV2Controls();
+        throw appError("CRYPTO_V2_NOT_READY",message);
+      }
+
       await cryptoV2Module.encryptConversationMessage(
         currentUser.userId,activeConversation.id,activeConversation.peerUserId,text
       );
