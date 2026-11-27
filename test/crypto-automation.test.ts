@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 
-const app = readFileSync(new URL("../src/web-client/app.js", import.meta.url), "utf8");
-const automation = readFileSync(new URL("../src/web-client/crypto-automation.js", import.meta.url), "utf8");
-const crypto = readFileSync(new URL("../src/web-client/crypto-v2.js", import.meta.url), "utf8");
+const app = readFileSync(join(__dirname, "../src/renderer/web-client/app.js"), "utf8");
+const automation = readFileSync(join(__dirname, "../src/renderer/web-client/crypto-automation.js"), "utf8");
+const crypto = readFileSync(join(__dirname, "../src/renderer/web-client/crypto-v2.js"), "utf8");
 
 test("desktop automatic key exchange runs after sign-in and during foreground maintenance", () => {
   assert.match(app, /void runAutomaticCryptoMaintenance\(\)/);
