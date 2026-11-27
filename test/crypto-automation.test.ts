@@ -9,7 +9,8 @@ const crypto = readFileSync(join(__dirname, "../src/renderer/web-client/crypto-v
 
 test("desktop automatic key exchange runs after sign-in and during foreground maintenance", () => {
   assert.match(app, /void runAutomaticCryptoMaintenance\(\)/);
-  assert.match(app, /\+\+cryptoMaintenanceTick % 60 === 0/);
+  assert.match(app, /if\(\+\+cryptoMaintenanceTick % 60 === 0\)/);
+  assert.match(app, /including when its window is minimized/);
   assert.match(app, /document\.addEventListener\("visibilitychange"/);
   assert.match(app, /window\.addEventListener\("focus"/);
 });
