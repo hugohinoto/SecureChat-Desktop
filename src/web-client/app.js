@@ -41,6 +41,7 @@ let cryptoModeRefreshTick = 0;
 let activeCryptoMode = { protocolVersion: 1, approvedByMe: false, approvedByPeer: false };
 const autoV2ApprovalInFlight = new Set();
 let cryptoMaintenanceInFlight = false, cryptoMaintenanceTick = 0;
+let cryptoV2InitializationError = null;
 let activePeerSigningKey = null, activePeerFingerprintVerified = false;
 
 function toast(message, duration = 3200) {
@@ -452,6 +453,7 @@ async function runAutomaticCryptoMaintenance() {
 }
 
 async function initializeCryptoV2IfEnabled() {
+  cryptoV2InitializationError=null;
   cryptoV2Ready=false;
   cryptoV2Module=null;
   activeProtocolVersion=1;
@@ -474,8 +476,11 @@ async function initializeCryptoV2IfEnabled() {
       signingPrivateKey:ownRecord.signingPrivateKey,
       authorizeDevice:authorizeCryptoDevice
     });
-    cryptoV2Ready=true;
     const deviceState=await cryptoV2Module.getCryptoDeviceState(currentUser.userId);
+    if(!deviceState?.initialized || !deviceState.deviceId) {
+      throw appError("CRYPTO_DEVICE_REGISTRATION_INCOMPLETE","端末鍵は生成されましたが、サーバー上の端末登録を確認できませんでした。通信状態と端末登録状態を確認してください。");
+    }
+    cryptoV2Ready=true;
     cryptoV2StatusMessage="この端末のv2暗号鍵を準備しました。端末ID: "+deviceState.deviceId;
   } catch(error) {
     if(cryptoV2Module?.closeCryptoV2 && currentUser) {
@@ -484,11 +489,16 @@ async function initializeCryptoV2IfEnabled() {
     cryptoV2Module=null;
     cryptoV2Ready=false;
     if(error.code==="CRYPTO_V2_DISABLED") {
+      cryptoV2InitializationError=null;
       cryptoV2Required=false;
       cryptoV2StatusMessage="前方秘匿性v2は現在無効です（安全確認中）。";
     } else {
-      cryptoV2StatusMessage="v2端末の初期化に失敗しました: "+(error.code||"CRYPTO_INIT_ERROR");
-      console.error("SecureChat crypto v2 initialization failed:",error.code||"CRYPTO_INIT_ERROR");
+      cryptoV2InitializationError={
+        code: typeof error?.code==="string" ? error.code : "CRYPTO_INIT_ERROR",
+        message: typeof error?.message==="string" && error.message ? error.message : "v2端末の初期化に失敗しました。"
+      };
+      cryptoV2StatusMessage="v2端末の初期化に失敗しました: "+cryptoV2InitializationError.code+" — "+cryptoV2InitializationError.message;
+      console.error("SecureChat crypto v2 initialization failed:",cryptoV2InitializationError.code);
     }
   }
   updateCryptoV2Controls();
@@ -502,6 +512,9 @@ function updateCryptoV2Controls() {
     el.cryptoV2Approve.disabled=true;
   }
   if(el.cryptoV2DevicesToggle)el.cryptoV2DevicesToggle.hidden=!cryptoV2Ready;
+  // Do not replace a concrete device-initialization failure with the generic
+  // V2 migration notice; the actual cause is needed to recover safely.
+  if(cryptoV2InitializationError) return;
   if(el.cryptoV2Status && cryptoV2Required && activeProtocolVersion!==2) {
     el.cryptoV2Status.textContent=activeCryptoMode.approvedByMe
       ? "前方秘匿性を必須化しています。相手の本人確認完了後に自動でv2へ移行します。既存v1メッセージは閲覧できますが、新規送信はできません。"
@@ -1513,7 +1526,11 @@ async function sendMessage() {
   try {
     if(cryptoV2Required) {
       if(!cryptoV2Ready || !cryptoV2Module) {
-        throw appError("CRYPTO_V2_DEVICE_NOT_INITIALIZED","この端末のv2暗号鍵を初期化できていません。再読み込み後も続く場合は端末登録状態を確認してください。");
+        const initializationError=cryptoV2InitializationError;
+        throw appError(
+          initializationError?.code || "CRYPTO_V2_DEVICE_NOT_INITIALIZED",
+          initializationError?.message || "この端末のv2暗号鍵を初期化できていません。再読み込み後も続く場合は端末登録状態を確認してください。"
+        );
       }
 
       // Re-read the authoritative mode before sending. The peer may have
