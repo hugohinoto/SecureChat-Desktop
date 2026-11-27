@@ -1133,7 +1133,9 @@ async function signIn(user,password=null) {
   });
   refreshTimer=setInterval(()=>{
     const foreground=document.visibilityState==="visible" && document.hasFocus();
-    if(foreground && ++cryptoMaintenanceTick % 60 === 0) {
+    // Keep device inbox and signed one-time-key inventory fresh while the
+    // desktop app is running, including when its window is minimized.
+    if(++cryptoMaintenanceTick % 60 === 0) {
       runAutomaticCryptoMaintenance().catch(error => {
         console.warn("SecureChat automatic crypto maintenance failed:", error?.code || "CRYPTO_MAINTENANCE_ERROR");
       });
