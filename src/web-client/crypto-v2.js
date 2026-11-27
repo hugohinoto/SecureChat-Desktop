@@ -549,6 +549,21 @@ export async function getConversationCryptoMode(userId, conversationId) {
   });
 }
 
+export async function maintainPeerSessions(userId, peerUserId) {
+  const key = String(userId).toLowerCase();
+  if (!/^[a-z0-9_]{3,32}$/.test(key) || !/^[a-z0-9_]{3,32}$/.test(String(peerUserId || "").toLowerCase())) {
+    throw cryptoError("CRYPTO_USER_ID_INVALID", "暗号化ユーザーIDが不正です。");
+  }
+  const context = machines.get(key);
+  if (!context) throw cryptoError("CRYPTO_DEVICE_NOT_INITIALIZED", "この端末の暗号鍵が初期化されていません。");
+  return withMachineLock(key, async () => {
+    const current = machines.get(key);
+    if (!current) throw cryptoError("CRYPTO_DEVICE_NOT_INITIALIZED", "この端末の暗号鍵が初期化されていません。");
+    await registerAndTrustParticipants(current, String(peerUserId).toLowerCase());
+    return { prepared: true };
+  });
+}
+
 export async function prepareEncryptedConversation(userId, conversationId, peerUserId) {
   const key = String(userId).toLowerCase();
   const context = machines.get(key);
