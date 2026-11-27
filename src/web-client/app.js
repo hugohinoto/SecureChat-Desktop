@@ -1,5 +1,6 @@
 import { decryptIdentityBackup, encryptIdentityBackup } from "./identity-backup.js";
 import { fingerprintsMatch } from "./identity-fingerprint.js";
+import { runAutomaticCryptoKeyExchange } from "./crypto-automation.js";
 const $ = (s) => document.querySelector(s);
 const el = {
   connection: $("#connection-pill"), connectionLabel: $("#connection-label"),
@@ -39,6 +40,7 @@ let unreadCountsInitialized = false;
 let cryptoModeRefreshTick = 0;
 let activeCryptoMode = { protocolVersion: 1, approvedByMe: false, approvedByPeer: false };
 const autoV2ApprovalInFlight = new Set();
+let cryptoMaintenanceInFlight = false, cryptoMaintenanceTick = 0;
 let activePeerSigningKey = null, activePeerFingerprintVerified = false;
 
 function toast(message, duration = 3200) {
@@ -355,6 +357,96 @@ async function confirmPeerFingerprint(peerUserId,peer) {
   await saveIdentity(currentUser.userId,{...ownRecord,verifiedPeerPins});
   return true;
 }
+async function isPeerIdentityTrustedForAutomaticCrypto(peerUserId) {
+  const contactsData = await api("/api/contacts");
+  const contacts = contactsData.contacts || [];
+  if (!contacts.some(contact => String(contact?.userId || contact?.user_id || "").toLowerCase() === peerUserId)) return false;
+
+  const peer = await api("/api/keys/" + encodeURIComponent(peerUserId));
+  if (!peer.identitySigningPublicKey || !peer.identityKeySignature) {
+    throw appError("IDENTITY_KEY_LEGACY_FORMAT", "相手の署名付きアカウント鍵がありません。");
+  }
+  const signingKey = await crypto.subtle.importKey("raw", fromB64(peer.identitySigningPublicKey), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+  const proofValid = await crypto.subtle.verify(
+    { name: "ECDSA", hash: "SHA-256" }, signingKey, fromB64(peer.identityKeySignature),
+    identityProofMessage(peerUserId, peer.identityPublicKey)
+  );
+  if (!proofValid) throw appError("IDENTITY_KEY_SIGNATURE_INVALID", "相手の公開鍵署名を検証できません。");
+
+  const ownRecord = await storedIdentity(currentUser.userId);
+  const peerPins = { ...(ownRecord?.peerPins || {}) };
+  const verifiedPeerPins = { ...(ownRecord?.verifiedPeerPins || {}) };
+  if (peerPins[peerUserId] && peerPins[peerUserId] !== peer.identitySigningPublicKey) {
+    if (activeConversation?.peerUserId === peerUserId) {
+      await showPeerKeyChangeVerification(peerUserId, peer, peerPins[peerUserId]);
+    }
+    throw appError("IDENTITY_SIGNING_KEY_CHANGED", "相手の署名鍵変更を検出しました。別経路で指紋を確認するまで鍵交換を停止しています。");
+  }
+  if (!peerPins[peerUserId]) {
+    peerPins[peerUserId] = peer.identitySigningPublicKey;
+    await saveIdentity(currentUser.userId, { ...ownRecord, peerPins });
+  }
+
+  const trusted = verifiedPeerPins[peerUserId] === peer.identitySigningPublicKey;
+  if (activeConversation?.peerUserId === peerUserId) {
+    activePeerSigningKey = peer.identitySigningPublicKey;
+    activePeerFingerprintVerified = trusted;
+    const [ownFingerprint, peerFingerprint] = await Promise.all([
+      publicKeyFingerprint(identitySigningPublicKey),
+      publicKeyFingerprint(peer.identitySigningPublicKey)
+    ]);
+    renderPeerFingerprintPanel(peerUserId, ownFingerprint, peerFingerprint, peer);
+  }
+  return trusted;
+}
+
+async function runAutomaticCryptoMaintenance() {
+  if (!currentUser || !cryptoV2Ready || !cryptoV2Required || !cryptoV2Module || cryptoMaintenanceInFlight) return [];
+  cryptoMaintenanceInFlight = true;
+  try {
+    const [contactsData, conversationsData] = await Promise.all([
+      api("/api/contacts"),
+      api("/api/conversations")
+    ]);
+    const outcomes = await runAutomaticCryptoKeyExchange({
+      userId: currentUser.userId,
+      contacts: contactsData.contacts || [],
+      conversations: conversationsData.conversations || [],
+      crypto: cryptoV2Module,
+      isPeerTrusted: isPeerIdentityTrustedForAutomaticCrypto,
+      onError: (error, conversation) => {
+        console.warn("SecureChat automatic key exchange failed:", error?.code || "CRYPTO_AUTO_EXCHANGE_FAILED");
+        if (activeConversation?.id === conversation?.id) {
+          cryptoV2StatusMessage = "自動鍵交換を再試行します: " + (error?.code || "CRYPTO_AUTO_EXCHANGE_FAILED");
+          updateCryptoV2Controls();
+        }
+      }
+    });
+    const active = outcomes.find(item => item.conversationId === activeConversation?.id);
+    if (active?.mode && activeConversation) {
+      const previousVersion = activeProtocolVersion;
+      activeCryptoMode = active.mode;
+      activeProtocolVersion = Number(active.mode.protocolVersion || 1);
+      if (activeProtocolVersion === 2) {
+        cryptoV2StatusMessage = "前方秘匿性v2有効 — ユーザー間の端末鍵交換とメッセージ鍵更新は自動です。";
+        if (previousVersion !== 2) await loadMessages(true);
+      } else {
+        cryptoV2StatusMessage = active.mode.approvedByMe
+          ? "この端末のV2移行準備は完了しました。相手側の準備を自動で待機しています。"
+          : "本人確認済みの連絡先についてV2鍵交換を自動で準備しています。";
+      }
+      updateCryptoV2Controls();
+      updateSend();
+    } else if (active?.status === "identity-unverified" && activeConversation) {
+      cryptoV2StatusMessage = "指紋の別経路確認が完了するまで、この相手との自動鍵交換を保留しています。";
+      updateCryptoV2Controls();
+    }
+    return outcomes;
+  } finally {
+    cryptoMaintenanceInFlight = false;
+  }
+}
+
 async function initializeCryptoV2IfEnabled() {
   cryptoV2Ready=false;
   cryptoV2Module=null;
@@ -1032,8 +1124,17 @@ async function signIn(user,password=null) {
   state("connected","準備完了");
   startAuthCheck();
   clearInterval(refreshTimer);
+  void runAutomaticCryptoMaintenance().catch(error => {
+    console.warn("SecureChat automatic crypto maintenance failed:", error?.code || "CRYPTO_MAINTENANCE_ERROR");
+  });
   refreshTimer=setInterval(()=>{
-    if(document.visibilityState==="visible" && document.hasFocus() && activeConversation) {
+    const foreground=document.visibilityState==="visible" && document.hasFocus();
+    if(foreground && ++cryptoMaintenanceTick % 30 === 0) {
+      runAutomaticCryptoMaintenance().catch(error => {
+        console.warn("SecureChat automatic crypto maintenance failed:", error?.code || "CRYPTO_MAINTENANCE_ERROR");
+      });
+    }
+    if(foreground && activeConversation) {
       if(activeProtocolVersion!==2 && ++cryptoModeRefreshTick % 5 === 0) {
         refreshCryptoConversationMode()
           .then(()=>maybeAutoApproveCryptoV2ForActiveConversation())
@@ -1463,3 +1564,13 @@ async function bootstrap() {
   }
 }
 bootstrap();
+
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && currentUser) {
+    runAutomaticCryptoMaintenance().catch(() => {});
+  }
+});
+window.addEventListener("focus", () => {
+  if (currentUser) runAutomaticCryptoMaintenance().catch(() => {});
+});
